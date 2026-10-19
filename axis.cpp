@@ -16,7 +16,7 @@
 #include <memory>
 #include <QScrollArea>
 #include "interventionpage.h"
-#include "vehiculepage.h"
+#include "vehiclespage.h"
 #include "sidebar.h"
 // ===== MODULE EMPLOYÉS (fin des includes) =====
 
@@ -97,6 +97,29 @@ private:
 
 // ===== FIN classes graphiques =====
 
+// Supprime le contenu « placeholder » d'une page du .ui (widgets et layouts imbriqués compris)
+// pour pouvoir y placer le widget réel d'un module.
+static void viderLayout(QLayout *layout)
+{
+    while (QLayoutItem *item = layout->takeAt(0)) {
+        if (QWidget *w = item->widget()) {
+            w->hide();
+            w->deleteLater();
+        } else if (QLayout *sub = item->layout()) {
+            viderLayout(sub);
+        }
+        delete item;
+    }
+}
+
+static void viderPage(QWidget *page)
+{
+    if (QLayout *old = page->layout()) {
+        viderLayout(old);
+        delete old;
+    }
+}
+
 // ------------------------------------------------------------ Construction
 AXIS::AXIS(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::AXIS)
@@ -120,27 +143,21 @@ AXIS::AXIS(QWidget *parent)
     layoutMateriel->setContentsMargins(0, 0, 0, 0);
     layoutMateriel->addWidget(materielPage_);
 
+    // ===== MODULE INTERVENTIONS =====
+    viderPage(ui->PInterv);
     interventionPage_ = new InterventionPage(ui->PInterv);
 
     auto *layoutIntervention = new QVBoxLayout(ui->PInterv);
     layoutIntervention->setContentsMargins(0, 0, 0, 0);
     layoutIntervention->addWidget(interventionPage_);
 
-    // ===== MODULE VÉHICULES : remplace la page provisoire de PVehicule =====
-    ui->lblTitreVehicule->deleteLater();
-    ui->lblInfoVehicule->deleteLater();
-    ui->btnRetourMenuVehicule->deleteLater();
-    if (QLayout *old = ui->PVehicule->layout()) {
-        while (QLayoutItem *it = old->takeAt(0)) {
-            if (it->widget()) it->widget()->deleteLater();
-            delete it;
-        }
-        delete old;
-    }
-    vehiculePage_ = new VehiculePage(ui->PVehicule);
+    // ===== MODULE VÉHICULES =====
+    viderPage(ui->PVehicule);
+    vehiclesPage_ = new VehiclesPage(ui->PVehicule);
+
     auto *layoutVehicule = new QVBoxLayout(ui->PVehicule);
     layoutVehicule->setContentsMargins(0, 0, 0, 0);
-    layoutVehicule->addWidget(vehiculePage_);
+    layoutVehicule->addWidget(vehiclesPage_);
 
     // Barre latérale du module Employés (même structure que celle des interventions), à gauche de la page CRUD
     sidebarEmpl_ = new SidebarFrame(ui->PCrudEmpl);
@@ -199,10 +216,8 @@ AXIS::AXIS(QWidget *parent)
     connect(interventionPage_, &InterventionPage::logoutRequested, this, &AXIS::deconnexionEmploye);
     connect(materielPage_, &MaterielPage::menuRequested, this, &AXIS::allerAuMenu);
     connect(materielPage_, &MaterielPage::logoutRequested, this, &AXIS::deconnexionEmploye);
-    connect(vehiculePage_, &VehiculePage::menuRequested, this, &AXIS::allerAuMenu);
-    connect(vehiculePage_, &VehiculePage::logoutRequested, this, &AXIS::deconnexionEmploye);
-    // Pages des autres modules (à remplacer par les widgets de vos camarades)
-    connect(ui->btnRetourMenuInterv, &QPushButton::clicked, this, &AXIS::allerAuMenu);
+    connect(vehiclesPage_, &VehiclesPage::menuRequested, this, &AXIS::allerAuMenu);
+    connect(vehiclesPage_, &VehiclesPage::logoutRequested, this, &AXIS::deconnexionEmploye);
 
 
     // ----- Module Employés -----
@@ -273,7 +288,7 @@ void AXIS::appliquerDroits()
 {
     const QString connecte = QString("Connecté : %1 (%2)").arg(user_.nomComplet(), user_.poste);
     sidebarEmpl_->setInfo(connecte);
-    vehiculePage_->setInfo(connecte);
+    vehiclesPage_->setUserInfo(connecte);
     ui->lblConnecteMenuEmpl->setText(connecte);
     ui->lblBienvenueEmpl->setText("Bienvenue " + user_.nomComplet());
 
@@ -325,7 +340,6 @@ void AXIS::allerAuModule(int module)
         rafraichirListe();
     } else {                                        // autres modules : pages du SWAxis
         ui->SWAxis->setCurrentIndex(module);
-        if (module == 2) vehiculePage_->reload();   // alertes de maintenance à jour
     }
 }
 

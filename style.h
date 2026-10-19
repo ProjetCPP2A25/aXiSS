@@ -40,6 +40,7 @@ QPushButton#btnAdd:hover, QPushButton#btnMvSave:hover { background: #e00000; }
 
 QTableWidget { background: transparent; border: none; color: #e6e6e6; font-size: 11px; }
 QTableWidget::item { border-bottom: 1px solid #2b2f35; padding: 2px; }
+QHeaderView { background: transparent; }
 QHeaderView::section { background: transparent; color: #aeb3b9; border: none;
                        border-bottom: 1px solid #2b2f35; padding: 2px; font-size: 10px; }
 QToolButton { background: transparent; border: none; border-radius: 6px; padding: 4px; font-size: 16px; }

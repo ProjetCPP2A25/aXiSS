@@ -8,7 +8,7 @@ namespace Ui { class AXIS; }
 QT_END_NAMESPACE
 
 class InterventionPage;
-class VehiculePage;
+class VehiclesPage;
 class SidebarFrame;
 class QThread;
 class QTimer;
@@ -57,8 +57,8 @@ private:
     bool peutDecider_ = false;
     QTimer *timerSurcharge_ = nullptr;
     MaterielPage *materielPage_ = nullptr;
-    InterventionPage *interventionPage_;
-    VehiculePage *vehiculePage_ = nullptr;
+    InterventionPage *interventionPage_ = nullptr;
+    VehiclesPage *vehiclesPage_ = nullptr;
     SidebarFrame *sidebarEmpl_ = nullptr;
     // ===== FIN MODULE EMPLOYÉS =====
 };

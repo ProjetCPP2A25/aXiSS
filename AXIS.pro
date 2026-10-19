@@ -24,9 +24,9 @@ SOURCES += \
     sidebar.cpp \
     smtp.cpp \
     statspanel.cpp \
-    vehicule.cpp \
-    vehiculedonut.cpp \
-    vehiculepage.cpp
+    vehiclespage.cpp \
+    vehicledonutwidget.cpp
+
 
 HEADERS += \
     helpers.h \
@@ -49,15 +49,15 @@ HEADERS += \
     smtp.h \
     statspanel.h \
     style.h \
-    vehicule.h \
-    vehiculedonut.h \
-    vehiculepage.h
+    vehiclespage.h \
+    vehicledonutwidget.h \
+    vehicletheme.h
+
 
 FORMS += \
     axis.ui \
     interventionpage.ui \
-    materielpage.ui \
-    vehiculepage.ui
+    materielpage.ui
 
 RESOURCES += \
     ressources.qrc

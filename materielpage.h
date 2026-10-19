@@ -14,8 +14,8 @@ public:
     ~MaterielPage() override;
 
 signals:
-    void menuRequested();       // bouton « Menu principal »
-    void logoutRequested();     // bouton « Déconnexion »
+    void menuRequested();       // bouton « Menu principal » (barre latérale)
+    void logoutRequested();     // bouton « Déconnexion » (barre latérale)
 
 public slots:
     void refresh();
@@ -25,16 +25,16 @@ private slots:
     void clearForm();
     void exportCsv();
     void handleAction(const QString &link);
-    void addMouvement();
 
 private:
     void fillForm(const Materiel &m);
     void refreshMateriels();
     void refreshStats();
-    void refreshMouvements();
     void sendAlertEmail(const QList<Materiel> &critical);
 
     Ui::MaterielPage *ui;   // widgets définis dans materielpage.ui
     int editingId = 0;
     QSet<int> lastCritical;
+    bool alertsPrimed = false;   // 1er rafraîchissement (démarrage) : on mémorise seulement l'état, sans email
+    QString mailStatus;          // résultat du dernier envoi, affiché dans le bandeau
 };
