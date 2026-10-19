@@ -1,0 +1,1850 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AXIS</class>
+ <widget class="QMainWindow" name="AXIS">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1500</width>
+    <height>850</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>A.X.I.S - RedFlame Protection</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="lay87">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QStackedWidget" name="SWAxis">
+      <property name="currentIndex">
+       <number>1</number>
+      </property>
+      <widget class="QWidget" name="PEmpl">
+       <layout class="QVBoxLayout" name="lay68">
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QStackedWidget" name="stackedWidgetEmpl">
+          <widget class="QWidget" name="PLoginEmpl">
+           <layout class="QVBoxLayout" name="lay7">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <spacer name="sp1">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="lay5">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <item>
+               <spacer name="sp2">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QFrame" name="frmLoginEmpl">
+                <property name="minimumSize">
+                 <size>
+                  <width>400</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>400</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="panel" stdset="0">
+                 <bool>true</bool>
+                </property>
+                <layout class="QVBoxLayout" name="lay3">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>28</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>24</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>28</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>24</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="lblLogoLoginEmpl">
+                   <property name="text">
+                    <string>A.X.I.S</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignmentFlag::AlignCenter</set>
+                   </property>
+                   <property name="logo" stdset="0">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="lblSousTitreLoginEmpl">
+                   <property name="text">
+                    <string>RedFlame Protection</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignmentFlag::AlignCenter</set>
+                   </property>
+                   <property name="muted" stdset="0">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="lblTitreLoginEmpl">
+                   <property name="text">
+                    <string>Connexion</string>
+                   </property>
+                   <property name="h2" stdset="0">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="txtEmailLoginEmpl">
+                   <property name="placeholderText">
+                    <string>Email</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="txtMdpLoginEmpl">
+                   <property name="echoMode">
+                    <enum>QLineEdit::EchoMode::Password</enum>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Mot de passe</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnConnexionEmpl">
+                   <property name="text">
+                    <string>Se connecter</string>
+                   </property>
+                   <property name="primary" stdset="0">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnMdpOublieEmpl">
+                   <property name="text">
+                    <string>Mot de passe oublié ?</string>
+                   </property>
+                   <property name="link" stdset="0">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnQuitterLoginEmpl">
+                   <property name="text">
+                    <string>Quitter</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <spacer name="sp4">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <spacer name="sp6">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="PMenuEmpl">
+           <layout class="QVBoxLayout" name="lay18">
+            <property name="spacing">
+             <number>10</number>
+            </property>
+            <property name="leftMargin">
+             <number>40</number>
+            </property>
+            <property name="topMargin">
+             <number>30</number>
+            </property>
+            <property name="rightMargin">
+             <number>40</number>
+            </property>
+            <property name="bottomMargin">
+             <number>30</number>
+            </property>
+            <item>
+             <layout class="QHBoxLayout" name="lay9">
+              <item>
+               <widget class="QLabel" name="lblBienvenueEmpl">
+                <property name="text">
+                 <string>Bienvenue</string>
+                </property>
+                <property name="h1" stdset="0">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="sp8">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="lblLogoMenuEmpl">
+                <property name="text">
+                 <string>A.X.I.S</string>
+                </property>
+                <property name="logo" stdset="0">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <spacer name="sp10">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="lay14" stretch="1,3,1">
+              <item>
+               <spacer name="sp11">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <layout class="QVBoxLayout" name="lay12">
+                <property name="spacing">
+                 <number>22</number>
+                </property>
+                <item>
+                 <widget class="QPushButton" name="btnMenuEmpl">
+                  <property name="text">
+                   <string>Gestion des Employés</string>
+                  </property>
+                  <property name="menu" stdset="0">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnMenuInterv">
+                  <property name="text">
+                   <string>Gestion des Interventions</string>
+                  </property>
+                  <property name="menu" stdset="0">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnMenuVehicule">
+                  <property name="text">
+                   <string>Gestion des Véhicules</string>
+                  </property>
+                  <property name="menu" stdset="0">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QPushButton" name="btnMenuMateriel">
+                  <property name="text">
+                   <string>Gestion des Matériels</string>
+                  </property>
+                  <property name="menu" stdset="0">
+                   <bool>true</bool>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <spacer name="sp13">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <spacer name="sp15">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="lay17">
+              <item>
+               <widget class="QLabel" name="lblConnecteMenuEmpl">
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="muted" stdset="0">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="sp16">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QPushButton" name="btnQuitterMenuEmpl">
+                <property name="text">
+                 <string>Quitter</string>
+                </property>
+                <property name="menu" stdset="0">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="PMdpOublieEmpl">
+           <layout class="QVBoxLayout" name="lay25">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <spacer name="sp19">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="lay23">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <item>
+               <spacer name="sp20">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QFrame" name="frmMdpOublieEmpl">
+                <property name="minimumSize">
+                 <size>
+                  <width>440</width>
+                  <height>0</height>
+                 </size>
+                </property>
+                <property name="maximumSize">
+                 <size>
+                  <width>440</width>
+                  <height>16777215</height>
+                 </size>
+                </property>
+                <property name="panel" stdset="0">
+                 <bool>true</bool>
+                </property>
+                <layout class="QVBoxLayout" name="lay21">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <property name="leftMargin">
+                  <number>28</number>
+                 </property>
+                 <property name="topMargin">
+                  <number>24</number>
+                 </property>
+                 <property name="rightMargin">
+                  <number>28</number>
+                 </property>
+                 <property name="bottomMargin">
+                  <number>24</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="lblTitreMdpOublieEmpl">
+                   <property name="text">
+                    <string>Mot de passe oublié</string>
+                   </property>
+                   <property name="h2" stdset="0">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="lblInfoMdpOublieEmpl">
+                   <property name="text">
+                    <string>Saisissez votre email : un mot de passe temporaire vous sera envoyé.</string>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                   <property name="muted" stdset="0">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="txtEmailMdpOublieEmpl">
+                   <property name="placeholderText">
+                    <string>nom@gmail.com</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnEnvoyerMdpOublieEmpl">
+                   <property name="text">
+                    <string>Envoyer le mot de passe temporaire</string>
+                   </property>
+                   <property name="primary" stdset="0">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QPushButton" name="btnRetourLoginMdpOublieEmpl">
+                   <property name="text">
+                    <string>Retour à la connexion</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </widget>
+              </item>
+              <item>
+               <spacer name="sp22">
+                <property name="orientation">
+                 <enum>Qt::Orientation::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>20</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+            <item>
+             <spacer name="sp24">
+              <property name="orientation">
+               <enum>Qt::Orientation::Vertical</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="PCrudEmpl">
+           <layout class="QHBoxLayout" name="lay67" stretch="1">
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="QScrollArea" name="scrollEmpl">
+              <property name="frameShape">
+               <enum>QFrame::Shape::NoFrame</enum>
+              </property>
+              <property name="widgetResizable">
+               <bool>true</bool>
+              </property>
+              <widget class="QWidget" name="contentEmpl">
+               <property name="geometry">
+                <rect>
+                 <x>0</x>
+                 <y>0</y>
+                 <width>829</width>
+                 <height>872</height>
+                </rect>
+               </property>
+               <property name="content" stdset="0">
+                <bool>true</bool>
+               </property>
+               <layout class="QVBoxLayout" name="lay66">
+                <property name="spacing">
+                 <number>14</number>
+                </property>
+                <property name="leftMargin">
+                 <number>24</number>
+                </property>
+                <property name="topMargin">
+                 <number>18</number>
+                </property>
+                <property name="rightMargin">
+                 <number>24</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>18</number>
+                </property>
+                <item>
+                 <layout class="QHBoxLayout" name="lay63">
+                  <property name="spacing">
+                   <number>10</number>
+                  </property>
+                  <item>
+                   <widget class="QLabel" name="lblTitreCrudEmpl">
+                    <property name="text">
+                     <string>Gestion des employés</string>
+                    </property>
+                    <property name="h1" stdset="0">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <spacer name="sp62">
+                    <property name="orientation">
+                     <enum>Qt::Orientation::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>20</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="lblAlerteEmpl">
+                    <property name="text">
+                     <string/>
+                    </property>
+                    <property name="alert" stdset="0">
+                     <bool>true</bool>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="lay64" stretch="0,1">
+                  <property name="spacing">
+                   <number>14</number>
+                  </property>
+                  <item>
+                   <widget class="QFrame" name="frmFormEmpl">
+                    <property name="minimumSize">
+                     <size>
+                      <width>275</width>
+                      <height>0</height>
+                     </size>
+                    </property>
+                    <property name="maximumSize">
+                     <size>
+                      <width>275</width>
+                      <height>16777215</height>
+                     </size>
+                    </property>
+                    <property name="panel" stdset="0">
+                     <bool>true</bool>
+                    </property>
+                    <layout class="QVBoxLayout" name="lay44">
+                     <property name="spacing">
+                      <number>8</number>
+                     </property>
+                     <property name="leftMargin">
+                      <number>16</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>14</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>16</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>16</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="lblTitreFormEmpl">
+                       <property name="text">
+                        <string>Ajouter un employé</string>
+                       </property>
+                       <property name="h2" stdset="0">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="layNomPrenomEmpl">
+                       <property name="spacing">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <layout class="QVBoxLayout" name="lay29">
+                         <property name="spacing">
+                          <number>3</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblNomEmpl">
+                           <property name="text">
+                            <string>Nom *</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QLineEdit" name="txtNomEmpl">
+                           <property name="placeholderText">
+                            <string>Nom</string>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                       <item>
+                        <layout class="QVBoxLayout" name="layPrenomEmpl">
+                         <property name="spacing">
+                          <number>3</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblPrenomEmpl">
+                           <property name="text">
+                            <string>Prénom *</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QLineEdit" name="txtPrenomEmpl">
+                           <property name="placeholderText">
+                            <string>Prénom</string>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QVBoxLayout" name="lay30">
+                       <property name="spacing">
+                        <number>3</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="lblEmailEmpl">
+                         <property name="text">
+                          <string>Email *</string>
+                         </property>
+                         <property name="muted" stdset="0">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="txtEmailEmpl">
+                         <property name="placeholderText">
+                          <string>nom@gmail.com</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QVBoxLayout" name="lay31">
+                       <property name="spacing">
+                        <number>3</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="lblTelEmpl">
+                         <property name="text">
+                          <string>Téléphone *</string>
+                         </property>
+                         <property name="muted" stdset="0">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="txtTelEmpl">
+                         <property name="placeholderText">
+                          <string>8 chiffres minimum (ex : 20123456)</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="lay34">
+                       <property name="spacing">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <layout class="QVBoxLayout" name="lay32">
+                         <property name="spacing">
+                          <number>3</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblAgeEmpl">
+                           <property name="text">
+                            <string>Âge</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QSpinBox" name="spnAgeEmpl">
+                           <property name="minimum">
+                            <number>18</number>
+                           </property>
+                           <property name="maximum">
+                            <number>70</number>
+                           </property>
+                           <property name="value">
+                            <number>30</number>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                       <item>
+                        <layout class="QVBoxLayout" name="lay33">
+                         <property name="spacing">
+                          <number>3</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblHeuresEmpl">
+                           <property name="text">
+                            <string>Heures / semaine</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QSpinBox" name="spnHeuresEmpl">
+                           <property name="minimum">
+                            <number>0</number>
+                           </property>
+                           <property name="maximum">
+                            <number>100</number>
+                           </property>
+                           <property name="value">
+                            <number>40</number>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="lay37">
+                       <property name="spacing">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <layout class="QVBoxLayout" name="lay35">
+                         <property name="spacing">
+                          <number>3</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblCongesEmpl">
+                           <property name="text">
+                            <string>Congés restants</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QSpinBox" name="spnCongesEmpl">
+                           <property name="minimum">
+                            <number>0</number>
+                           </property>
+                           <property name="maximum">
+                            <number>60</number>
+                           </property>
+                           <property name="value">
+                            <number>18</number>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                       <item>
+                        <layout class="QVBoxLayout" name="lay36">
+                         <property name="spacing">
+                          <number>3</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblGradeEmpl">
+                           <property name="text">
+                            <string>Grade</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QComboBox" name="cmbGradeEmpl">
+                           <item>
+                            <property name="text">
+                             <string>Caporal</string>
+                            </property>
+                           </item>
+                           <item>
+                            <property name="text">
+                             <string>Sergent</string>
+                            </property>
+                           </item>
+                           <item>
+                            <property name="text">
+                             <string>Lieutenant</string>
+                            </property>
+                           </item>
+                           <item>
+                            <property name="text">
+                             <string>Capitaine</string>
+                            </property>
+                           </item>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QVBoxLayout" name="lay38">
+                       <property name="spacing">
+                        <number>3</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="lblPosteEmpl">
+                         <property name="text">
+                          <string>Poste (rôle)</string>
+                         </property>
+                         <property name="muted" stdset="0">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="cmbPosteEmpl">
+                         <item>
+                          <property name="text">
+                           <string>Pompier</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Chef d'équipe</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Chef de caserne</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Opérateur de dispatch</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Administrateur</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Magasinier</string>
+                          </property>
+                         </item>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QVBoxLayout" name="lay39">
+                       <property name="spacing">
+                        <number>3</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="lblDispoEmpl">
+                         <property name="text">
+                          <string>Disponibilité</string>
+                         </property>
+                         <property name="muted" stdset="0">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="cmbDispoEmpl">
+                         <item>
+                          <property name="text">
+                           <string>Disponible</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>En intervention</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Indisponible</string>
+                          </property>
+                         </item>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QVBoxLayout" name="lay40">
+                       <property name="spacing">
+                        <number>3</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="lblMdpEmpl">
+                         <property name="text">
+                          <string>Mot de passe *</string>
+                         </property>
+                         <property name="muted" stdset="0">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="txtMdpEmpl">
+                         <property name="echoMode">
+                          <enum>QLineEdit::EchoMode::Password</enum>
+                         </property>
+                         <property name="placeholderText">
+                          <string>4 caractères minimum</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="lay42">
+                       <property name="spacing">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QPushButton" name="btnAjouterEmpl">
+                         <property name="text">
+                          <string>Ajouter</string>
+                         </property>
+                         <property name="primary" stdset="0">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QPushButton" name="btnViderEmpl">
+                         <property name="text">
+                          <string>Vider</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <spacer name="sp41">
+                         <property name="orientation">
+                          <enum>Qt::Orientation::Horizontal</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>20</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <spacer name="sp43">
+                       <property name="orientation">
+                        <enum>Qt::Orientation::Vertical</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>20</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QFrame" name="frmListeEmpl">
+                    <property name="panel" stdset="0">
+                     <bool>true</bool>
+                    </property>
+                    <layout class="QVBoxLayout" name="lay46">
+                     <property name="spacing">
+                      <number>8</number>
+                     </property>
+                     <property name="leftMargin">
+                      <number>16</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>14</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>16</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>16</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="lblTitreListeEmpl">
+                       <property name="text">
+                        <string>Liste des employés</string>
+                       </property>
+                       <property name="h2" stdset="0">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="lay45" stretch="2,2,3">
+                       <property name="spacing">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QLineEdit" name="txtRechercheEmpl">
+                         <property name="placeholderText">
+                          <string>Rechercher par nom</string>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="cmbTriEmpl">
+                         <item>
+                          <property name="text">
+                           <string>Trier par grade (du plus élevé)</string>
+                          </property>
+                         </item>
+                         <item>
+                          <property name="text">
+                           <string>Trier par grade (du plus bas)</string>
+                          </property>
+                         </item>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QPushButton" name="btnExporterEmpl">
+                         <property name="text">
+                          <string>Exporter l'attestation de présence (Excel)</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <widget class="QTableWidget" name="tblEmpl">
+                       <property name="minimumSize">
+                        <size>
+                         <width>300</width>
+                         <height>330</height>
+                        </size>
+                       </property>
+                      </widget>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="lay65" stretch="1,1">
+                  <property name="spacing">
+                   <number>14</number>
+                  </property>
+                  <item>
+                   <widget class="QFrame" name="frmStatsEmpl">
+                    <property name="minimumSize">
+                     <size>
+                      <width>300</width>
+                      <height>240</height>
+                     </size>
+                    </property>
+                    <property name="panel" stdset="0">
+                     <bool>true</bool>
+                    </property>
+                    <layout class="QVBoxLayout" name="lay52">
+                     <property name="spacing">
+                      <number>8</number>
+                     </property>
+                     <property name="leftMargin">
+                      <number>16</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>14</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>16</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>16</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="lblTitreStatsEmpl">
+                       <property name="text">
+                        <string>Statistiques du personnel</string>
+                       </property>
+                       <property name="h2" stdset="0">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="lay51" stretch="1,1">
+                       <property name="spacing">
+                        <number>14</number>
+                       </property>
+                       <item>
+                        <layout class="QVBoxLayout" name="lay49">
+                         <property name="spacing">
+                          <number>6</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblRepDispoEmpl">
+                           <property name="text">
+                            <string>Répartition par disponibilité</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <layout class="QHBoxLayout" name="lay47">
+                           <property name="spacing">
+                            <number>8</number>
+                           </property>
+                           <item>
+                            <layout class="QVBoxLayout" name="layoutDonutEmpl">
+                             <property name="leftMargin">
+                              <number>0</number>
+                             </property>
+                             <property name="topMargin">
+                              <number>0</number>
+                             </property>
+                             <property name="rightMargin">
+                              <number>0</number>
+                             </property>
+                             <property name="bottomMargin">
+                              <number>0</number>
+                             </property>
+                            </layout>
+                           </item>
+                           <item>
+                            <widget class="QLabel" name="lblLegendeEmpl">
+                             <property name="text">
+                              <string/>
+                             </property>
+                             <property name="wordWrap">
+                              <bool>true</bool>
+                             </property>
+                            </widget>
+                           </item>
+                          </layout>
+                         </item>
+                         <item>
+                          <spacer name="sp48">
+                           <property name="orientation">
+                            <enum>Qt::Orientation::Vertical</enum>
+                           </property>
+                           <property name="sizeHint" stdset="0">
+                            <size>
+                             <width>20</width>
+                             <height>20</height>
+                            </size>
+                           </property>
+                          </spacer>
+                         </item>
+                        </layout>
+                       </item>
+                       <item>
+                        <layout class="QVBoxLayout" name="lay50" stretch="0,1">
+                         <property name="spacing">
+                          <number>6</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblRepGradeEmpl">
+                           <property name="text">
+                            <string>Répartition par grade</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <layout class="QVBoxLayout" name="layoutBarresEmpl">
+                           <property name="leftMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="topMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="rightMargin">
+                            <number>0</number>
+                           </property>
+                           <property name="bottomMargin">
+                            <number>0</number>
+                           </property>
+                          </layout>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QFrame" name="frmCongeEmpl">
+                    <property name="panel" stdset="0">
+                     <bool>true</bool>
+                    </property>
+                    <layout class="QVBoxLayout" name="lay61">
+                     <property name="spacing">
+                      <number>8</number>
+                     </property>
+                     <property name="leftMargin">
+                      <number>16</number>
+                     </property>
+                     <property name="topMargin">
+                      <number>14</number>
+                     </property>
+                     <property name="rightMargin">
+                      <number>16</number>
+                     </property>
+                     <property name="bottomMargin">
+                      <number>16</number>
+                     </property>
+                     <item>
+                      <widget class="QLabel" name="lblTitreCongeEmpl">
+                       <property name="text">
+                        <string>Demandes de congé</string>
+                       </property>
+                       <property name="h2" stdset="0">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
+                     </item>
+                     <item>
+                      <layout class="QVBoxLayout" name="lay53">
+                       <property name="spacing">
+                        <number>3</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="lblCongeEmployeEmpl">
+                         <property name="text">
+                          <string>Employé</string>
+                         </property>
+                         <property name="muted" stdset="0">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QComboBox" name="cmbCongeEmpl"/>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="lay56">
+                       <property name="spacing">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <layout class="QVBoxLayout" name="lay54">
+                         <property name="spacing">
+                          <number>3</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblDebutCongeEmpl">
+                           <property name="text">
+                            <string>Date de début</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QDateEdit" name="dteDebutCongeEmpl">
+                           <property name="displayFormat">
+                            <string>dd/MM/yyyy</string>
+                           </property>
+                           <property name="calendarPopup">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                       <item>
+                        <layout class="QVBoxLayout" name="lay55">
+                         <property name="spacing">
+                          <number>3</number>
+                         </property>
+                         <item>
+                          <widget class="QLabel" name="lblFinCongeEmpl">
+                           <property name="text">
+                            <string>Date de fin</string>
+                           </property>
+                           <property name="muted" stdset="0">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                         <item>
+                          <widget class="QDateEdit" name="dteFinCongeEmpl">
+                           <property name="displayFormat">
+                            <string>dd/MM/yyyy</string>
+                           </property>
+                           <property name="calendarPopup">
+                            <bool>true</bool>
+                           </property>
+                          </widget>
+                         </item>
+                        </layout>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QVBoxLayout" name="lay57">
+                       <property name="spacing">
+                        <number>3</number>
+                       </property>
+                       <item>
+                        <widget class="QLabel" name="lblMotifCongeEmpl">
+                         <property name="text">
+                          <string>Motif</string>
+                         </property>
+                         <property name="muted" stdset="0">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <widget class="QLineEdit" name="txtMotifCongeEmpl">
+                         <property name="placeholderText">
+                          <string>Motif de la demande</string>
+                         </property>
+                        </widget>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QHBoxLayout" name="lay59">
+                       <property name="spacing">
+                        <number>8</number>
+                       </property>
+                       <item>
+                        <widget class="QPushButton" name="btnEnregistrerCongeEmpl">
+                         <property name="text">
+                          <string>Enregistrer la demande</string>
+                         </property>
+                         <property name="primary" stdset="0">
+                          <bool>true</bool>
+                         </property>
+                        </widget>
+                       </item>
+                       <item>
+                        <spacer name="sp58">
+                         <property name="orientation">
+                          <enum>Qt::Orientation::Horizontal</enum>
+                         </property>
+                         <property name="sizeHint" stdset="0">
+                          <size>
+                           <width>20</width>
+                           <height>20</height>
+                          </size>
+                         </property>
+                        </spacer>
+                       </item>
+                      </layout>
+                     </item>
+                     <item>
+                      <layout class="QVBoxLayout" name="layoutDemandesEmpl">
+                       <property name="spacing">
+                        <number>8</number>
+                       </property>
+                       <property name="leftMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="topMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="rightMargin">
+                        <number>0</number>
+                       </property>
+                       <property name="bottomMargin">
+                        <number>0</number>
+                       </property>
+                      </layout>
+                     </item>
+                     <item>
+                      <spacer name="sp60">
+                       <property name="orientation">
+                        <enum>Qt::Orientation::Vertical</enum>
+                       </property>
+                       <property name="sizeHint" stdset="0">
+                        <size>
+                         <width>20</width>
+                         <height>20</height>
+                        </size>
+                       </property>
+                      </spacer>
+                     </item>
+                    </layout>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </widget>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="PInterv">
+       <layout class="QVBoxLayout" name="lay74">
+        <item>
+         <spacer name="sp69">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblTitreInterv">
+          <property name="text">
+           <string>Gestion des interventions</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+          <property name="h1" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblInfoInterv">
+          <property name="text">
+           <string>Page du module de votre camarade : copiez ses widgets ici.</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+          <property name="muted" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="lay72">
+          <item>
+           <spacer name="sp70">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnRetourMenuInterv">
+            <property name="text">
+             <string>Retour au menu principal</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="sp71">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="sp73">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="PVehicule">
+       <layout class="QVBoxLayout" name="lay80">
+        <item>
+         <spacer name="sp75">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblTitreVehicule">
+          <property name="text">
+           <string>Gestion des véhicules</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+          <property name="h1" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblInfoVehicule">
+          <property name="text">
+           <string>Page du module de votre camarade : copiez ses widgets ici.</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignCenter</set>
+          </property>
+          <property name="muted" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="lay78">
+          <item>
+           <spacer name="sp76">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnRetourMenuVehicule">
+            <property name="text">
+             <string>Retour au menu principal</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="sp77">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="sp79">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="PMateriel">
+       <layout class="QVBoxLayout" name="lay86">
+        <item>
+         <spacer name="sp81">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="lay84">
+          <item>
+           <spacer name="sp82">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+          <item>
+           <spacer name="sp83">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="sp85">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>20</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

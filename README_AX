@@ -1,0 +1,4 @@
+AXIS - version Gestion des employés + Gestion des interventions
+
+Les fichiers sources des modules Véhicules et Matériels ont été retirés du projet.
+Ouvrir AXIS.pro dans Qt Creator puis exécuter qmake et reconstruire le projet.
