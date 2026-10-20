@@ -1,44 +1,32 @@
-# A.X.I.S – Module « Gestion des matériels » (Qt / C++)
+# A.X.I.S — Employés, Interventions et Véhicules (version intégrée)
 
-## Prérequis
-- Qt 5.15+ ou Qt 6 (modules Widgets et Sql, driver QSQLITE inclus avec Qt)
-- Un compilateur C++17
+Application unique : connexion -> menu principal -> modules.
 
-## Compilation
-**Qt Creator** : ouvrir `AXIS_Materiels.pro` (qmake), puis Exécuter.
+| Module | Rôles autorisés |
+|---|---|
+| Gestion des employés | Administrateur, Chef de caserne |
+| Gestion des interventions | Opérateur de dispatch, Chef de caserne |
+| Gestion des véhicules | Chef de caserne, Administrateur |
+| Gestion des matériels | pas encore intégré (bouton masqué) |
 
-**Ligne de commande (CMake)** :
-    cmake -S . -B build && cmake --build build
+Comptes de départ (mot de passe 1234) : admin@axis.com (Administrateur), karim.majri@email.com (Chef de caserne),
+leila.mansouri@email.com (Opérateur de dispatch).
 
-## Fichiers de l'interface (Qt Designer)
-- `mainwindow.ui` : fenêtre principale (barre latérale + pages)
-- `materielpage.ui` : écran « Gestion des matériels » (formulaire, liste, statistiques, mouvements)
-  Double-clic sur un `.ui` dans Qt Creator pour le modifier visuellement.
-  Les graphiques (`BarChartWidget`, `DonutWidget`) sont des widgets promus (en-tête `charts.h`).
-  Le style (couleurs) est dans `style.h`.
+## Ouvrir le projet
+1. Décompresser l'archive.
+2. Ouvrir `AXIS.pro` dans Qt Creator (kit Qt 6 avec Widgets, Network, SQL).
+3. Lancer qmake puis « Reconstruire le projet ».
 
-## Fonctionnalités
-- Ajout / modification / suppression / affichage d'un matériel (validation des champs, référence unique)
-- Recherche par référence ou désignation, tri (référence, désignation, catégorie, quantité, date)
-- Export de l'inventaire en CSV (ouvrable dans Excel)
-- Statistiques : quantités par catégorie (histogramme), niveaux de stock (anneau critique / suffisant)
-- Suivi des mouvements de stock (Entrée / Sortie) avec mise à jour automatique du stock
-- Bandeau « Stock critique » quand quantité < seuil minimal
+## Ce qui a été intégré pour les véhicules
+- Page `VehiclesPage` placée dans `PVehicule` ; bouton « Gestion des véhicules » du menu activé selon le rôle.
+- Barre latérale commune (Menu principal / Déconnexion / utilisateur connecté), comme les autres modules.
+- Données dans la table SQLite `vehicules` de la même base `caserne.db` (au lieu de `vehicules.json`).
+  Au premier lancement : reprise de l'ancien `vehicules.json` s'il existe, sinon 3 véhicules d'exemple.
+- Classes renommées pour éviter le conflit avec `DonutWidget` des interventions : `VehicleDonutWidget`, `VehicleSlice`.
+- Feuille de style du module limitée à sa page (n'affecte pas les autres modules).
+- Ajouts : bouton « Exporter (PDF) », contrôle d'immatriculation en double, bouton d'alerte maintenance par email
+  (utilise la configuration SMTP existante) à la place du bouton SMS qui n'était qu'une maquette.
 
-## Données
-Base SQLite `axis.db` créée au premier lancement dans le dossier AppData de l'utilisateur
-(avec les données de démonstration de la maquette). Supprimez ce fichier pour repartir de zéro.
-
-## Reste à faire
-- `MaterielPage::sendAlertEmail()` journalise seulement l'alerte : brancher un vrai envoi (SMTP...).
-
-## Module « Gestion des véhicules » (intégré)
-- `vehiculepage.ui` / `vehiculepage.*` : page Véhicules (formulaire, liste triable, alerte de maintenance,
-  statistiques par état et par disponibilité, export PDF et CSV). Même structure que `MaterielPage` :
-  barre latérale commune (`SidebarFrame`) + page défilante, signaux `menuRequested` / `logoutRequested`.
-- `vehicule.*` : structure `Vehicule` et accès SQLite (table `vehicules`, créée au premier lancement avec
-  3 véhicules d'exemple, dans la même base `caserne.db` que les autres modules).
-- `vehiculedonut.*` : graphiques en anneau (`VehiculeDonutWidget`, distinct de `DonutWidget` de `charts.h`).
-- Accès : rôles « Chef de caserne » et « Administrateur » (`Employe::aAcces`, module 2).
-- Le style réutilise `style.h` comme la page Matériels (cartes `card`, `cardTitle`, `fieldLabel`, `muted`,
-  bandeau `#banner`, boutons `btnAdd`).
+## Correction dans axis.ui
+`PInterv` contenait déjà un layout + des textes provisoires, alors que le code ajoutait un 2e layout (Qt l'ignore) :
+la page Interventions n'était pas dimensionnée correctement. Les pages `PInterv` et `PVehicule` ont maintenant un layout vide.

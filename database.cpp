@@ -30,18 +30,38 @@ static const char *SELECT_MAT =
 
 bool Database::open(QString *error)
 {
-    QSqlDatabase db = QSqlDatabase::database();
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QDir().mkpath(dir);
 
-    if (!db.isValid() || !db.isOpen()) {
-        if (error)
-            *error = "La base de données du projet n'est pas ouverte.";
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+    db.setDatabaseName(dir + "/axis.db");
+    if (!db.open()) {
+        if (error) *error = db.lastError().text();
+        return false;
+    }
+
+    // Mode autonome uniquement : table employes minimale, même structure que celle d'AXIS
+    QSqlQuery q(db);
+    q.exec("CREATE TABLE IF NOT EXISTS employes (id TEXT PRIMARY KEY, nom TEXT NOT NULL)");
+    q.exec("SELECT COUNT(*) FROM employes");
+    if (q.next() && q.value(0).toInt() == 0) {
+        q.exec("INSERT INTO employes(id, nom) VALUES "
+               "('E001','Sami Gharbi'),('E002','Rim Trabelsi'),('E003','Karim Majri'),"
+               "('E004','Leila Mansouri'),('E006','Youssef Ben Salah')");
+    }
+    return init(error);
+}
+
+bool Database::init(QString *error)
+{
+    QSqlDatabase db = QSqlDatabase::database();   // connexion par défaut (déjà ouverte)
+    if (!db.isOpen()) {
+        if (error) *error = "Aucune connexion ouverte : appelez Connexion::ouvrir() avant Database::init().";
         return false;
     }
 
     QSqlQuery q(db);
-
     q.exec("PRAGMA foreign_keys = ON");
-
     q.exec("CREATE TABLE IF NOT EXISTS materiels ("
            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
            "reference TEXT NOT NULL UNIQUE,"
@@ -53,7 +73,6 @@ bool Database::open(QString *error)
            "disponibilite TEXT NOT NULL,"
            "date_acquisition TEXT NOT NULL,"
            "emplacement TEXT)");
-
     q.exec("CREATE TABLE IF NOT EXISTS mouvements ("
            "id INTEGER PRIMARY KEY AUTOINCREMENT,"
            "date TEXT NOT NULL,"
@@ -63,18 +82,36 @@ bool Database::open(QString *error)
            "motif TEXT,"
            "employe_id TEXT REFERENCES employes(id) ON DELETE SET NULL)");
 
+    // Jeu de données de démonstration (identique à la maquette)
+    q.exec("SELECT COUNT(*) FROM materiels");
+    if (q.next() && q.value(0).toInt() == 0) {
+        q.exec("INSERT INTO materiels(id, reference, designation, categorie, quantite, seuil, etat, "
+               "disponibilite, date_acquisition, emplacement) VALUES "
+               "(1,'MAT-0001','Tuyau d''incendie 40 m','Lutte incendie',24,10,'Bon','Disponible','2024-03-12','Rayon A'),"
+               "(2,'MAT-0002','Extincteur CO2','Lutte incendie',6,8,'Bon','Disponible','2024-06-05','Rayon B'),"
+               "(3,'MAT-0003','Masque respiratoire','Protection',15,10,'Bon','Disponible','2025-01-20','Rayon C'),"
+               "(4,'MAT-0004','Trousse de secours','Secours',3,5,'Bon','Disponible','2025-09-14','Rayon D')");
+        // L'employé est cherché par son nom (NULL s'il n'existe pas)
+        q.exec("INSERT INTO mouvements(date, type, materiel_id, quantite, motif, employe_id) VALUES "
+               "('2026-09-29','Sortie',2,2,'Intervention',(SELECT id FROM employes WHERE nom IN ('Karim Majri','Majri') LIMIT 1)),"
+               "('2026-09-25','Entrée',1,10,'Réapprovisionnement',(SELECT id FROM employes WHERE nom IN ('Sami Gharbi','Gharbi') LIMIT 1))");
+    }
     return true;
 }
 
 QList<Materiel> Database::materiels(const QString &search, const QString &orderColumn)
 {
     // Liste blanche pour éviter toute injection via le nom de colonne
-    static const QStringList allowed = {"reference", "designation", "categorie", "quantite", "date_acquisition"};
+    static const QStringList allowed = {"reference", "designation", "categorie", "quantite", "date_acquisition", "etat"};
     const QString col = allowed.contains(orderColumn) ? orderColumn : "reference";
 
     QSqlQuery q;
-    q.prepare(QString("%1 WHERE reference LIKE :s OR designation LIKE :s ORDER BY %2 COLLATE NOCASE")
-                  .arg(SELECT_MAT, col));
+    // Tri par état : ordre logique Bon, Moyen, Mauvais, Hors service (puis par référence)
+    const QString orderBy = (col == "etat")
+        ? QString("CASE etat WHEN 'Bon' THEN 1 WHEN 'Moyen' THEN 2 WHEN 'Mauvais' THEN 3 ELSE 4 END, reference COLLATE NOCASE")
+        : QString("%1 COLLATE NOCASE").arg(col);
+    q.prepare(QString("%1 WHERE reference LIKE :s OR designation LIKE :s ORDER BY %2")
+                  .arg(SELECT_MAT, orderBy));
     q.bindValue(":s", "%" + search + "%");
     QList<Materiel> list;
     if (q.exec())
@@ -103,21 +140,8 @@ bool Database::referenceExists(const QString &reference, int ignoreId)
 bool Database::addMateriel(const Materiel &m, QString *error)
 {
     QSqlQuery q;
-
-    QString sql =
-        "INSERT INTO materiels "
-        "(reference, designation, categorie, quantite, seuil, etat, "
-        "disponibilite, date_acquisition, emplacement) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-    if (!q.prepare(sql)) {
-        if (error)
-            *error = "Prepare error : " + q.lastError().text();
-
-        qDebug() << "PREPARE ERROR:" << q.lastError().text();
-        return false;
-    }
-
+    q.prepare("INSERT INTO materiels(reference, designation, categorie, quantite, seuil, etat, "
+              "disponibilite, date_acquisition, emplacement) VALUES (?,?,?,?,?,?,?,?,?)");
     q.addBindValue(m.reference);
     q.addBindValue(m.designation);
     q.addBindValue(m.categorie);
@@ -125,60 +149,34 @@ bool Database::addMateriel(const Materiel &m, QString *error)
     q.addBindValue(m.seuil);
     q.addBindValue(m.etat);
     q.addBindValue(m.disponibilite);
-    q.addBindValue(m.dateAcquisition.toString(Qt::ISODate));
+    q.addBindValue(m.dateAcquisition.toString(ISO));
     q.addBindValue(m.emplacement);
-
-    qDebug() << "SQL:" << q.lastQuery();
-    qDebug() << "VALUES COUNT:" << q.boundValues().size();
-    qDebug() << "VALUES:" << q.boundValues();
-
     if (!q.exec()) {
-        if (error)
-            *error = "Execute error : " + q.lastError().text();
-
-        qDebug() << "EXEC ERROR:" << q.lastError().text();
+        if (error) *error = q.lastError().text();
         return false;
     }
-
     return true;
 }
+
 bool Database::updateMateriel(const Materiel &m, QString *error)
 {
     QSqlQuery q;
-
-    q.prepare(
-        "UPDATE materiels SET "
-        "reference = :reference, "
-        "designation = :designation, "
-        "categorie = :categorie, "
-        "quantite = :quantite, "
-        "seuil = :seuil, "
-        "etat = :etat, "
-        "disponibilite = :disponibilite, "
-        "date_acquisition = :date_acquisition, "
-        "emplacement = :emplacement "
-        "WHERE id = :id"
-        );
-
-    q.bindValue(":reference", m.reference);
-    q.bindValue(":designation", m.designation);
-    q.bindValue(":categorie", m.categorie);
-    q.bindValue(":quantite", m.quantite);
-    q.bindValue(":seuil", m.seuil);
-    q.bindValue(":etat", m.etat);
-    q.bindValue(":disponibilite", m.disponibilite);
-    q.bindValue(":date_acquisition", m.dateAcquisition.toString(Qt::ISODate));
-    q.bindValue(":emplacement", m.emplacement);
-    q.bindValue(":id", m.id);
-
+    q.prepare("UPDATE materiels SET reference=?, designation=?, categorie=?, quantite=?, seuil=?, "
+              "etat=?, disponibilite=?, date_acquisition=?, emplacement=? WHERE id=?");
+    q.addBindValue(m.reference);
+    q.addBindValue(m.designation);
+    q.addBindValue(m.categorie);
+    q.addBindValue(m.quantite);
+    q.addBindValue(m.seuil);
+    q.addBindValue(m.etat);
+    q.addBindValue(m.disponibilite);
+    q.addBindValue(m.dateAcquisition.toString(ISO));
+    q.addBindValue(m.emplacement);
+    q.addBindValue(m.id);
     if (!q.exec()) {
-        if (error)
-            *error = q.lastError().text();
-
-        qDebug() << "Erreur UPDATE materiel :" << q.lastError().text();
+        if (error) *error = q.lastError().text();
         return false;
     }
-
     return true;
 }
 
@@ -195,19 +193,11 @@ bool Database::deleteMateriel(int id, QString *error)
     return true;
 }
 
-QList<DatabaseEmploye> Database::employes()
+QList<EmployeLite> Database::employes()
 {
-    QList<DatabaseEmploye> list;
-
-    QSqlQuery q("SELECT id, TRIM(prenom || ' ' || nom) FROM employes ORDER BY nom, prenom");
-
-    while (q.next()) {
-        DatabaseEmploye e;
-        e.id = q.value(0).toInt();
-        e.nom = q.value(1).toString();
-        list << e;
-    }
-
+    QList<EmployeLite> list;
+    QSqlQuery q("SELECT id, nom FROM employes ORDER BY nom");
+    while (q.next()) list << EmployeLite{q.value(0).toString(), q.value(1).toString()};
     return list;
 }
 
@@ -216,7 +206,7 @@ QList<Mouvement> Database::mouvements(int limit)
     QList<Mouvement> list;
     QSqlQuery q;
     q.prepare("SELECT mv.id, mv.date, mv.type, mv.materiel_id, m.designation, mv.quantite, mv.motif, "
-              "IFNULL(e.id,0), IFNULL(TRIM(e.prenom || ' ' || e.nom),'') "
+              "IFNULL(e.id,''), IFNULL(e.nom,'') "
               "FROM mouvements mv JOIN materiels m ON m.id = mv.materiel_id "
               "LEFT JOIN employes e ON e.id = mv.employe_id "
               "ORDER BY mv.date DESC, mv.id DESC LIMIT ?");
@@ -231,7 +221,7 @@ QList<Mouvement> Database::mouvements(int limit)
             m.materielNom = q.value(4).toString();
             m.quantite = q.value(5).toInt();
             m.motif = q.value(6).toString();
-            m.employeId = q.value(7).toInt();
+            m.employeId = q.value(7).toString();
             m.employeNom = q.value(8).toString();
             list << m;
         }
@@ -273,7 +263,7 @@ bool Database::addMouvement(const Mouvement &m, QString *error)
         q.addBindValue(m.materielId);
         q.addBindValue(m.quantite);
         q.addBindValue(m.motif);
-        q.addBindValue(m.employeId > 0 ? QVariant(m.employeId) : QVariant());
+        q.addBindValue(m.employeId.isEmpty() ? QVariant() : QVariant(m.employeId));
         ok = q.exec();
     }
     if (!ok) {

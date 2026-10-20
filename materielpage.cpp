@@ -2,16 +2,20 @@
 #include "ui_materielpage.h"   // généré à partir de materielpage.ui
 #include "charts.h"
 #include "style.h"
+#include "smtp.h"
 #include "sidebar.h"
 
 #include <QtWidgets>
-
+#include <QRegularExpression>
+#include <QSettings>
+#include <QThread>
+#include <memory>
 
 static const QStringList kCategories = {"Lutte incendie", "Protection", "Secours"};
 static const char *kDateFmt = "dd/MM/yyyy";
+// Destinataire des alertes de stock critique (modifiable via la clé « materiel/alert_to » des réglages)
+static const char *kAlertEmail = "ahmed.rebhi@esprit.tn";
 static const int kRowH = 58;          // hauteur des lignes du tableau des matériels
-static const int kMvRowH = 34;        // hauteur des lignes du tableau des mouvements
-static const int kMaxMouvements = 10; // nombre de mouvements affichés
 
 // ---------- Helpers ----------
 
@@ -24,6 +28,7 @@ static QWidget *badgeCell(const QString &text, const QString &kind)
     auto *l = new QHBoxLayout(w);
     l->setContentsMargins(4, 0, 4, 0);
     auto *b = new QLabel(text);
+    // Style en ligne (et non via propriété dynamique) pour que la taille du badge soit correcte dès l'affichage
     const QString bg = kind == "ok" ? "#e3f4e8" : kind == "crit" ? "#fde8e8" : "#fdeedb";
     const QString fg = kind == "ok" ? "#1e7e34" : kind == "crit" ? "#c0392b" : "#b9650b";
     b->setStyleSheet(QString("QLabel { background:%1; color:%2; border:1px solid %1; border-radius:9px; padding:1px 8px; "
@@ -45,7 +50,7 @@ static QString csvField(const QString &s)
 
 MaterielPage::MaterielPage(QWidget *parent) : QWidget(parent), ui(new Ui::MaterielPage)
 {
-    // L'interface du .ui est construite dans un widget interne,
+    // Intégration dans AXIS : l'interface du .ui est construite dans un widget interne,
     // placé dans un QScrollArea : la page défile verticalement.
     auto *contenu = new QWidget;
     ui->setupUi(contenu);
@@ -56,7 +61,7 @@ MaterielPage::MaterielPage(QWidget *parent) : QWidget(parent), ui(new Ui::Materi
     scroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     scroll->setWidget(contenu);
 
-    // Barre latérale à gauche (même structure que la gestion des interventions), page défilante à droite
+    // Barre latérale commune à gauche, page défilante à droite
     auto *sidebar = new SidebarFrame;
     connect(sidebar, &SidebarFrame::menuRequested, this, &MaterielPage::menuRequested);
     connect(sidebar, &SidebarFrame::logoutRequested, this, &MaterielPage::logoutRequested);
@@ -67,11 +72,24 @@ MaterielPage::MaterielPage(QWidget *parent) : QWidget(parent), ui(new Ui::Materi
     externe->addWidget(sidebar);
     externe->addWidget(scroll, 1);
 
+    // Thème sombre appliqué à cette page uniquement (n'affecte pas le reste de l'application AXIS)
+    QPalette pal;
+    pal.setColor(QPalette::Window, QColor("#17191c"));
+    pal.setColor(QPalette::WindowText, QColor("#e6e6e6"));
+    pal.setColor(QPalette::Base, QColor("#14161a"));
+    pal.setColor(QPalette::AlternateBase, QColor("#1c1f23"));
+    pal.setColor(QPalette::Text, QColor("#e6e6e6"));
+    pal.setColor(QPalette::Button, QColor("#1c1f23"));
+    pal.setColor(QPalette::ButtonText, QColor("#e6e6e6"));
+    pal.setColor(QPalette::Highlight, QColor("#ff0000"));
+    pal.setColor(QPalette::HighlightedText, Qt::white);
+    pal.setColor(QPalette::PlaceholderText, QColor("#5b6068"));
+    setPalette(pal);
+    setAttribute(Qt::WA_StyledBackground, true);   // nécessaire pour que le fond (QSS) soit dessiné
     setStyleSheet(kStyle);
 
     ui->leQuantite->setValidator(new QIntValidator(0, 1000000, this));
     ui->leSeuil->setValidator(new QIntValidator(0, 1000000, this));
-    ui->leMvQte->setValidator(new QIntValidator(1, 1000000, this));
 
     // Tableau des matériels : largeurs de colonnes (la désignation prend l'espace restant)
     QHeaderView *h = ui->table->horizontalHeader();
@@ -79,20 +97,14 @@ MaterielPage::MaterielPage(QWidget *parent) : QWidget(parent), ui(new Ui::Materi
     h->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     h->setSectionResizeMode(QHeaderView::Fixed);
     h->setSectionResizeMode(2, QHeaderView::Stretch);
-    const int widths[] = {48, 80, 0, 92, 66, 46, 58, 98, 82, 76, 112};
+    const int widths[] = {48, 80, 0, 92, 66, 46, 100, 98, 82, 76, 112};
     for (int c = 0; c < 11; ++c)
         if (widths[c]) ui->table->setColumnWidth(c, widths[c]);
-
-    QHeaderView *hm = ui->tableMv->horizontalHeader();
-    hm->setFixedHeight(32);
-    hm->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    hm->setSectionResizeMode(QHeaderView::Stretch);
 
     // Signaux / slots
     connect(ui->btnAdd, &QPushButton::clicked, this, &MaterielPage::submitForm);
     connect(ui->btnClear, &QPushButton::clicked, this, &MaterielPage::clearForm);
     connect(ui->btnExport, &QPushButton::clicked, this, &MaterielPage::exportCsv);
-    connect(ui->btnMvSave, &QPushButton::clicked, this, &MaterielPage::addMouvement);
     connect(ui->leSearch, &QLineEdit::textChanged, this, &MaterielPage::refreshMateriels);
     connect(ui->cbSort, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             &MaterielPage::refreshMateriels);
@@ -111,12 +123,11 @@ void MaterielPage::refresh()
 {
     refreshMateriels();
     refreshStats();
-    refreshMouvements();
 }
 
 void MaterielPage::refreshMateriels()
 {
-    static const char *cols[] = {"reference", "designation", "categorie", "quantite", "date_acquisition"};
+    static const char *cols[] = {"etat", "designation", "categorie", "quantite", "date_acquisition"};
     const QList<Materiel> items = Database::materiels(ui->leSearch->text().trimmed(), cols[ui->cbSort->currentIndex()]);
 
     ui->table->setRowCount(0);
@@ -157,7 +168,7 @@ void MaterielPage::refreshMateriels()
         cl->setSpacing(2);
         // Boutons-emoji : Afficher / Modifier / Supprimer
         const struct { const char *emoji, *tip, *kind; } actions[] = {
-                        {"👁️", "Afficher", "view"}, {"✏️", "Modifier", "edit"}, {"🗑️", "Supprimer", "del"}};
+            {"👁️", "Afficher", "view"}, {"✏️", "Modifier", "edit"}, {"🗑️", "Supprimer", "del"}};
         for (const auto &a : actions) {
             auto *btn = new QToolButton;
             btn->setText(a.emoji);
@@ -194,62 +205,33 @@ void MaterielPage::refreshStats()
     ui->donut->setData(crit, ok);
     auto pct = [&](int n) { return total ? qRound(100.0 * n / total) : 0; };
     ui->legendCrit->setText(QString("<span style='color:#d40000'>●</span> Stock critique <b>%1</b> (%2%)")
-                                .arg(crit).arg(pct(crit)));
+                            .arg(crit).arg(pct(crit)));
     ui->legendOk->setText(QString("<span style='color:#1e9e4a'>●</span> Stock suffisant <b>%1</b> (%2%)")
-                              .arg(ok).arg(pct(ok)));
+                          .arg(ok).arg(pct(ok)));
 
-    // Bandeau + alerte magasinier
+    // Bandeau + alerte par email : on n'alerte que pour les matériels qui VIENNENT de passer sous le seuil
+    QSet<int> ids;
+    for (const Materiel &m : critical) ids.insert(m.id);
+
+    if (!alertsPrimed) {
+        alertsPrimed = true;            // démarrage : pas d'email, on mémorise l'état actuel
+    } else {
+        QList<Materiel> nouveaux;
+        for (const Materiel &m : critical)
+            if (!lastCritical.contains(m.id)) nouveaux << m;
+        if (!nouveaux.isEmpty()) sendAlertEmail(nouveaux);
+    }
+    lastCritical = ids;
+
     if (crit > 0) {
-        ui->banner->setText(QString("Stock critique : %1 matériel%2 sous le seuil minimal. "
-                                    "Un email a été envoyé au magasinier.")
-                                .arg(crit).arg(crit > 1 ? "s" : ""));
+        QString txt = QString("Stock critique : %1 matériel%2 sous le seuil minimal.")
+                          .arg(crit).arg(crit > 1 ? "s" : "");
+        if (!mailStatus.isEmpty()) txt += " " + mailStatus;
+        ui->banner->setText(txt);
         ui->banner->show();
-        QSet<int> ids;
-        for (const Materiel &m : critical) ids.insert(m.id);
-        if (ids != lastCritical) {   // n'alerter que si la liste des matériels critiques change
-            lastCritical = ids;
-            sendAlertEmail(critical);
-        }
     } else {
         ui->banner->hide();
-        lastCritical.clear();
     }
-
-    // Liste des matériels pour les mouvements (on conserve la sélection)
-    const int selected = ui->cbMvMat->currentData().toInt();
-    ui->cbMvMat->clear();
-    for (const Materiel &m : all) ui->cbMvMat->addItem(m.reference + " " + m.designation, m.id);
-    const int idx = ui->cbMvMat->findData(selected);
-    if (idx >= 0) ui->cbMvMat->setCurrentIndex(idx);
-
-    const int selEmp = ui->cbMvEmp->currentData().toInt();
-    ui->cbMvEmp->clear();
-    for (const DatabaseEmploye &e : Database::employes())
-        ui->cbMvEmp->addItem(e.nom, e.id);
-    const int eidx = ui->cbMvEmp->findData(selEmp);
-    if (eidx >= 0) ui->cbMvEmp->setCurrentIndex(eidx);
-}
-
-void MaterielPage::refreshMouvements()
-{
-    const QList<Mouvement> list = Database::mouvements(kMaxMouvements);
-    ui->tableMv->setRowCount(0);
-    ui->tableMv->setRowCount(list.size());
-    for (int r = 0; r < list.size(); ++r) {
-        const Mouvement &m = list[r];
-        auto item = [&](int c, const QString &s) {
-            auto *it = new QTableWidgetItem(s);
-            it->setFlags(Qt::ItemIsEnabled);
-            ui->tableMv->setItem(r, c, it);
-        };
-        item(0, m.date.toString(kDateFmt));
-        ui->tableMv->setCellWidget(r, 1, badgeCell(m.type, m.type == "Entrée" ? "ok" : "warn"));
-        item(2, m.materielNom);
-        item(3, QString::number(m.quantite));
-        item(4, m.motif);
-        item(5, m.employeNom);
-    }
-    ui->tableMv->setFixedHeight(32 + qMax(list.size(), 1) * kMvRowH + 2);
 }
 
 // ---------- Actions ----------
@@ -271,7 +253,9 @@ void MaterielPage::submitForm()
     else if (Database::referenceExists(m.reference, editingId))
         errors << "Cette référence existe déjà.";
     if (m.designation.isEmpty())
-        errors << "La désignation est obligatoire.";
+        errors << "La désignation est obligatoire (nom du matériel).";
+    else if (m.designation.size() < 2 || !m.designation.contains(QRegularExpression("\\p{L}")))
+        errors << "La désignation doit être un nom de matériel (ex. Extincteur CO2), pas un nombre.";
 
     bool okQ = false, okS = false;
     m.quantite = ui->leQuantite->text().toInt(&okQ);
@@ -346,7 +330,7 @@ void MaterielPage::handleAction(const QString &link)
     } else if (kind == "del") {
         const auto rep = QMessageBox::question(
             this, "Supprimer",
-            QString("Supprimer « %1 » ?\nSes mouvements de stock seront également supprimés.").arg(m.designation));
+            QString("Supprimer « %1 » ?").arg(m.designation));
         if (rep != QMessageBox::Yes) return;
         QString err;
         if (!Database::deleteMateriel(id, &err)) {
@@ -356,46 +340,6 @@ void MaterielPage::handleAction(const QString &link)
         if (editingId == id) clearForm();
         refresh();
     }
-}
-
-void MaterielPage::addMouvement()
-{
-    QStringList errors;
-    if (ui->cbMvMat->currentIndex() < 0) errors << "Aucun matériel sélectionné.";
-    bool ok = false;
-    const int qte = ui->leMvQte->text().toInt(&ok);
-    if (!ok || qte <= 0) errors << "La quantité doit être un entier supérieur à 0.";
-
-    QDate date = QDate::currentDate();   // date vide = aujourd'hui
-    if (!ui->leMvDate->text().trimmed().isEmpty()) {
-        date = QDate::fromString(ui->leMvDate->text().trimmed(), kDateFmt);
-        if (!date.isValid()) errors << "Date invalide (format jj/mm/aaaa).";
-    }
-    if (ui->leMvMotif->text().trimmed().isEmpty()) errors << "Le motif est obligatoire.";
-    if (ui->cbMvEmp->currentIndex() < 0) errors << "Aucun employé sélectionné.";
-
-    if (!errors.isEmpty()) {
-        QMessageBox::warning(this, "Saisie invalide", errors.join("\n"));
-        return;
-    }
-
-    Mouvement mv;
-    mv.date = date;
-    mv.type = ui->cbMvType->currentText();
-    mv.materielId = ui->cbMvMat->currentData().toInt();
-    mv.quantite = qte;
-    mv.motif = ui->leMvMotif->text().trimmed();
-    mv.employeId = ui->cbMvEmp->currentData().toInt();
-
-    QString err;
-    if (!Database::addMouvement(mv, &err)) {
-        QMessageBox::warning(this, "Mouvement refusé", err);
-        return;
-    }
-    ui->leMvDate->clear();
-    ui->leMvQte->clear();
-    ui->leMvMotif->clear();
-    refresh();
 }
 
 void MaterielPage::exportCsv()
@@ -427,9 +371,50 @@ void MaterielPage::exportCsv()
 
 void MaterielPage::sendAlertEmail(const QList<Materiel> &critical)
 {
-    // TODO : brancher un vrai envoi d'email (SMTP, API mail...). Pour l'instant on journalise seulement.
     QStringList lines;
     for (const Materiel &m : critical)
-        lines << QString("  - %1 %2 : %3 en stock (seuil %4)").arg(m.reference, m.designation).arg(m.quantite).arg(m.seuil);
-    qInfo().noquote() << "[ALERTE STOCK] Email à envoyer au magasinier :\n" + lines.join("\n");
+        lines << QString("  - %1 %2 : %3 en stock (seuil minimal %4)").arg(m.reference, m.designation).arg(m.quantite).arg(m.seuil);
+
+    // Mêmes réglages SMTP que le reste de l'application (menu « Paramètres email »)
+    QSettings s;
+    SmtpConfig cfg;
+    cfg.hote = s.value("smtp/host", "smtp.gmail.com").toString();
+    cfg.port = s.value("smtp/port", 465).toInt();
+    cfg.user = s.value("smtp/user").toString().trimmed();
+    cfg.pass = s.value("smtp/pass").toString();
+    QString from = s.value("smtp/from").toString().trimmed();
+    if (from.isEmpty() && cfg.user.contains('@')) from = cfg.user;
+    const QString to = s.value("materiel/alert_to", kAlertEmail).toString().trimmed();
+
+    qInfo().noquote() << "[ALERTE STOCK] Email pour" << to << ":\n" + lines.join("\n");
+
+    if (cfg.user.isEmpty() || cfg.pass.trimmed().isEmpty() || from.isEmpty()) {
+        mailStatus = "Email non envoyé : paramètres email non configurés.";
+        return;
+    }
+
+    EmailMessage msg;
+    msg.from = from;
+    msg.nomFrom = "A.X.I.S - Gestion des matériels";
+    msg.to = to;
+    msg.sujet = QString("[A.X.I.S] Stock critique : %1 matériel%2 sous le seuil minimal")
+                    .arg(critical.size()).arg(critical.size() > 1 ? "s" : "");
+    msg.corps = QString("Bonjour,\n\nLes matériels suivants sont passés sous leur seuil minimal de stock :\n\n%1\n\n"
+                        "Merci de procéder au réapprovisionnement.\n\nA.X.I.S - RedFlame Protection")
+                    .arg(lines.join("\n"));
+
+    mailStatus = "Envoi de l'email d'alerte en cours...";
+
+    // Envoi dans un thread séparé : l'interface ne se bloque pas
+    auto erreur = std::make_shared<QString>();
+    auto ok = std::make_shared<bool>(false);
+    QThread *th = QThread::create([=] { *ok = envoyerEmail(cfg, msg, *erreur); });
+    connect(th, &QThread::finished, this, [this, th, erreur, ok, to] {
+        mailStatus = *ok ? QString("Email d'alerte envoyé à %1.").arg(to)
+                         : QString("Email non envoyé : %1").arg(*erreur);
+        if (!*ok) qWarning().noquote() << "[ALERTE STOCK]" << mailStatus;
+        th->deleteLater();
+        refreshStats();
+    });
+    th->start();
 }

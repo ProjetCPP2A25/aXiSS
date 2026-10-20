@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
         return 1;
     }
     QString dbError;
-    if (!Database::open(&dbError)) {
+    if (!Database::init(&dbError)) {
         QMessageBox::critical(nullptr, "Base de données", dbError);
         return 1;
     }

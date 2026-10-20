@@ -1,0 +1,1630 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Grade</class>
+ <widget class="QMainWindow" name="Grade">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1450</width>
+    <height>870</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>A.X.I.S – RedFlame Protection (Gestion des Gardes)</string>
+  </property>
+  <property name="styleSheet">
+   <string>/* ===== GLOBAL STYLE ===== */
+QWidget {
+    font-family: &quot;Segoe UI&quot;;
+    font-size: 10pt;
+    color: #1E293B;
+}
+
+QMainWindow, QDialog {
+    background-color: #F1F5F9;
+}
+
+/* ===== SIDEBAR ===== */
+QFrame#sidebar {
+    background-color: #111C2E;
+    border: none;
+}
+
+QLabel#appTitle {
+    color: #FFFFFF;
+    font-size: 19pt;
+    font-weight: bold;
+}
+
+QLabel#appSubtitle {
+    color: #94A3B8;
+    font-size: 9pt;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+QPushButton#navButton,
+QFrame#sidebar QPushButton {
+    background-color: transparent;
+    color: #CBD5E1;
+    border: none;
+    border-radius: 7px;
+    padding: 11px 14px;
+    text-align: left;
+    font-size: 10pt;
+}
+
+QPushButton#navButton:hover,
+QFrame#sidebar QPushButton:hover {
+    background-color: #263449;
+    color: white;
+}
+
+QPushButton#navButton:checked,
+QFrame#sidebar QPushButton:checked {
+    background-color: #D9363E;
+    color: white;
+    font-weight: bold;
+}
+
+/* ===== PAGE TITLE ===== */
+QLabel#pageTitle {
+    color: #142238;
+    font-size: 22pt;
+    font-weight: bold;
+}
+
+QLabel#pageSubtitle {
+    color: #64748B;
+    font-size: 10pt;
+}
+
+/* ===== STATISTICS CARDS ===== */
+QFrame#statCard,
+QFrame#statCard1,
+QFrame#statCard2,
+QFrame#statCard3,
+QFrame#statCard4,
+QFrame#statCardParticipation,
+QFrame#selectedWorkshopCard {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+}
+
+QLabel#statTitle,
+QLabel#statTitle1,
+QLabel#statTitle2,
+QLabel#statTitle3,
+QLabel#statTitle4,
+QLabel#statTitleParticipation {
+    color: #64748B;
+    font-size: 10pt;
+}
+
+QLabel#statValue,
+QLabel#statValue1,
+QLabel#statValue2,
+QLabel#statValue3,
+QLabel#statValue4,
+QLabel#statValueParticipation {
+    color: #142238;
+    font-size: 24pt;
+    font-weight: bold;
+}
+
+/* ===== INPUTS ===== */
+QLineEdit, QComboBox, QDateEdit,
+QTimeEdit, QSpinBox, QDoubleSpinBox {
+    background-color: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 7px;
+    padding: 9px;
+    min-height: 18px;
+    selection-background-color: #D9363E;
+}
+
+QLineEdit:focus, QComboBox:focus,
+QDateEdit:focus, QTimeEdit:focus, QSpinBox:focus {
+    border: 1px solid #D9363E;
+}
+
+QLineEdit:disabled {
+    background-color: #F1F5F9;
+    color: #94A3B8;
+}
+
+/* ===== BUTTONS ===== */
+QPushButton#primaryButton,
+QPushButton#addButton {
+    background-color: #D9363E;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 7px;
+    padding: 10px 18px;
+    font-weight: bold;
+}
+
+QPushButton#primaryButton:hover,
+QPushButton#addButton:hover {
+    background-color: #B91C28;
+}
+
+QPushButton#secondaryButton,
+QPushButton#detailsButton,
+QPushButton#statsButton,
+QPushButton#pdfButton,
+QPushButton#recommendButton,
+QPushButton#certButton,
+QPushButton#btnPlanifierIntervention,
+QPushButton#btnAttestation,
+QPushButton#btnRappelEmail,
+QPushButton#btnRetourClients1,
+QPushButton#btnRetourClients2,
+QPushButton#btnRetourClients3,
+QPushButton#btnRetourClients4 {
+    background-color: #FFFFFF;
+    color: #334155;
+    border: 1px solid #CBD5E1;
+    border-radius: 7px;
+    padding: 9px 16px;
+    text-align: center;
+}
+
+QPushButton#secondaryButton:hover,
+QPushButton#detailsButton:hover,
+QPushButton#statsButton:hover,
+QPushButton#pdfButton:hover,
+QPushButton#recommendButton:hover,
+QPushButton#certButton:hover,
+QPushButton#btnPlanifierIntervention:hover,
+QPushButton#btnAttestation:hover,
+QPushButton#btnRappelEmail:hover,
+QPushButton#btnRetourClients1:hover,
+QPushButton#btnRetourClients2:hover,
+QPushButton#btnRetourClients3:hover,
+QPushButton#btnRetourClients4:hover {
+    background-color: #F1F5F9;
+}
+
+QPushButton#dangerButton,
+QPushButton#btnResilier {
+    background-color: #FEE2E2;
+    color: #B91C1C;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+QPushButton#dangerButton:hover,
+QPushButton#btnResilier:hover {
+    background-color: #FECACA;
+}
+
+/* ===== TABLE ===== */
+QTableWidget {
+    background-color: #FFFFFF;
+    alternate-background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    gridline-color: #E2E8F0;
+    selection-background-color: #FEE2E2;
+    selection-color: #142238;
+}
+
+QTableWidget::item {
+    padding: 8px;
+    border: none;
+}
+
+QHeaderView::section {
+    background-color: #F8FAFC;
+    color: #475569;
+    padding: 12px 8px;
+    border: none;
+    border-bottom: 1px solid #E2E8F0;
+    font-weight: bold;
+}
+
+/* ===== STATUS BADGES ===== */
+QLabel#activeStatus {
+    background-color: #DCFCE7;
+    color: #166534;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-weight: bold;
+}
+
+QLabel#pendingStatus {
+    background-color: #FEF3C7;
+    color: #92400E;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-weight: bold;
+}
+
+QLabel#completedStatus {
+    background-color: #E2E8F0;
+    color: #334155;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-weight: bold;
+}
+
+QLabel#expiredStatus {
+    background-color: #FEE2E2;
+    color: #B91C1C;
+    border-radius: 5px;
+    padding: 5px 8px;
+    font-weight: bold;
+}
+
+/* ===== SCROLLBARS ===== */
+QScrollBar:vertical {
+    background: #F1F5F9;
+    width: 8px;
+    margin: 0;
+    border: none;
+}
+
+QScrollBar::handle:vertical {
+    background: #CBD5E1;
+    border-radius: 4px;
+    min-height: 25px;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* ===== MODULE HUBCARDS ===== */
+QFrame#moduleCard {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 12px;
+}
+
+QFrame#moduleCard:hover {
+    border: 1px solid #D9363E;
+}
+
+QLabel#moduleTitle {
+    color: #142238;
+    font-size: 13pt;
+    font-weight: bold;
+}
+
+QLabel#moduleDesc {
+    color: #64748B;
+    font-size: 9pt;
+}
+
+/* ===== RIGHT SIDEBAR AND MISC ===== */
+QFrame#rightSidebar {
+    background-color: #FFFFFF;
+    border: none;
+    border-left: 1px solid #E2E8F0;
+}
+
+QLabel#detailsTitle,
+QLabel#quickTitle,
+QLabel#listTitle {
+    color: #142238;
+    font-size: 13pt;
+    font-weight: bold;
+}
+
+QLabel#tagline {
+    color: #64748B;
+    font-size: 9pt;
+}
+
+QLabel#adminLabel {
+    background-color: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 7px;
+    padding: 6px 14px;
+    font-weight: bold;
+    color: #142238;
+}
+
+QLabel#selectedWorkshopTitle {
+    color: #142238;
+    font-size: 12pt;
+    font-weight: bold;
+}
+
+QLabel#details {
+    color: #334155;
+    line-height: 1.5;
+}
+</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QHBoxLayout" name="mainLayout">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
+    <!-- SIDEBAR -->
+    <item>
+     <widget class="QFrame" name="sidebar">
+      <property name="minimumSize">
+       <size>
+        <width>240</width>
+        <height>0</height>
+       </size>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>240</width>
+        <height>16777215</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="sidebarLayout">
+       <property name="spacing">
+        <number>6</number>
+       </property>
+       <property name="leftMargin">
+        <number>16</number>
+       </property>
+       <property name="topMargin">
+        <number>24</number>
+       </property>
+       <property name="rightMargin">
+        <number>16</number>
+       </property>
+       <property name="bottomMargin">
+        <number>20</number>
+       </property>
+       <item>
+        <widget class="QLabel" name="appTitle">
+         <property name="text">
+          <string>A.X.I.S</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="appSubtitle">
+         <property name="text">
+          <string>REDFLAME PROTECTION</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="spacer1">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>18</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <!-- NAVIGATION BUTTONS TO EACH OTHER MENU -->
+       <item>
+        <widget class="QPushButton" name="btnMenuPrincipal">
+         <property name="text">
+          <string>🏠  Menu Principal</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnGardes">
+         <property name="text">
+          <string>🛡️  Gestion des Gardes</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="checked">
+          <bool>true</bool>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnInterventions">
+         <property name="text">
+          <string>🚨  Interventions</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnVehicules">
+         <property name="text">
+          <string>🚒  Véhicules</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnMateriels">
+         <property name="text">
+          <string>🧯  Matériels</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnEmployes">
+         <property name="text">
+          <string>👨‍🚒  Employés</string>
+         </property>
+         <property name="checkable">
+          <bool>true</bool>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <spacer name="spacer2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
+        <widget class="QLabel" name="tagline">
+         <property name="text">
+          <string>Connecté : Chef de Garde
+Caserne RedFlame</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="btnDeconnexion">
+         <property name="text">
+          <string>🚪  Déconnexion</string>
+         </property>
+         <property name="cursor">
+          <cursorShape>PointingHandCursor</cursorShape>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <!-- MAIN CONTENT STACK -->
+    <item>
+     <widget class="QStackedWidget" name="contentStack">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <!-- PAGE 0 : GESTION DES GARDES -->
+      <widget class="QWidget" name="pageGardes">
+       <layout class="QHBoxLayout" name="pageGardesLayout">
+        <property name="spacing">
+         <number>0</number>
+        </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
+        <item>
+         <widget class="QFrame" name="mainContent">
+          <layout class="QVBoxLayout" name="mainLayout2">
+           <property name="spacing">
+            <number>14</number>
+           </property>
+           <property name="leftMargin">
+            <number>28</number>
+           </property>
+           <property name="topMargin">
+            <number>22</number>
+           </property>
+           <property name="rightMargin">
+            <number>28</number>
+           </property>
+           <property name="bottomMargin">
+            <number>22</number>
+           </property>
+           <!-- TOP BAR -->
+           <item>
+            <layout class="QHBoxLayout" name="topLayout">
+             <item>
+              <spacer name="searchSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="searchBar">
+               <property name="minimumSize">
+                <size>
+                 <width>380</width>
+                 <height>38</height>
+                </size>
+               </property>
+               <property name="placeholderText">
+                <string>Rechercher une garde (ID, date, chef, statut...)</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="adminLabel">
+               <property name="text">
+                <string>👤  Chef de Garde (RedFlame)</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <!-- PAGE TITLE -->
+           <item>
+            <widget class="QLabel" name="pageTitle">
+             <property name="text">
+              <string>Gestion des Gardes</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="pageSubtitle">
+             <property name="text">
+              <string>A.X.I.S – RedFlame Protection : Planification des gardes, tours de veille (Jour/Nuit) et effectifs opérationnels.</string>
+             </property>
+            </widget>
+           </item>
+           <!-- 4 METRICS CARDS -->
+           <item>
+            <layout class="QHBoxLayout" name="metricsLayout">
+             <property name="spacing">
+              <number>16</number>
+             </property>
+             <item>
+              <widget class="QFrame" name="statCard1">
+               <layout class="QVBoxLayout" name="cardLayout1">
+                <property name="spacing">
+                 <number>6</number>
+                </property>
+                <property name="leftMargin">
+                 <number>18</number>
+                </property>
+                <property name="topMargin">
+                 <number>16</number>
+                </property>
+                <property name="rightMargin">
+                 <number>18</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>16</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="statTitle1">
+                  <property name="text">
+                   <string>Total Gardes (Mois)</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="statValue1">
+                  <property name="text">
+                   <string>32</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QFrame" name="statCard2">
+               <layout class="QVBoxLayout" name="cardLayout2">
+                <property name="spacing">
+                 <number>6</number>
+                </property>
+                <property name="leftMargin">
+                 <number>18</number>
+                </property>
+                <property name="topMargin">
+                 <number>16</number>
+                </property>
+                <property name="rightMargin">
+                 <number>18</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>16</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="statTitle2">
+                  <property name="text">
+                   <string>Gardes en cours</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="statValue2">
+                  <property name="text">
+                   <string>2</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QFrame" name="statCard3">
+               <layout class="QVBoxLayout" name="cardLayout3">
+                <property name="spacing">
+                 <number>6</number>
+                </property>
+                <property name="leftMargin">
+                 <number>18</number>
+                </property>
+                <property name="topMargin">
+                 <number>16</number>
+                </property>
+                <property name="rightMargin">
+                 <number>18</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>16</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="statTitle3">
+                  <property name="text">
+                   <string>Gardes planifiées</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="statValue3">
+                  <property name="text">
+                   <string>18</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <widget class="QFrame" name="statCard4">
+               <layout class="QVBoxLayout" name="cardLayout4">
+                <property name="spacing">
+                 <number>6</number>
+                </property>
+                <property name="leftMargin">
+                 <number>18</number>
+                </property>
+                <property name="topMargin">
+                 <number>16</number>
+                </property>
+                <property name="rightMargin">
+                 <number>18</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>16</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="statTitle4">
+                  <property name="text">
+                   <string>Effectif Mobilisé</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="statValue4">
+                  <property name="text">
+                   <string>48</string>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <!-- LIST TITLE -->
+           <item>
+            <widget class="QLabel" name="listTitle">
+             <property name="text">
+              <string>Planning et Liste des Gardes</string>
+             </property>
+            </widget>
+           </item>
+           <!-- FILTER BAR -->
+           <item>
+            <layout class="QHBoxLayout" name="filterLayout">
+             <property name="spacing">
+              <number>10</number>
+             </property>
+             <item>
+              <widget class="QLineEdit" name="filterSearch">
+               <property name="placeholderText">
+                <string>Rechercher ID, date, chef de garde, pompier...</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="filterCategory">
+               <item>
+                <property name="text">
+                 <string>Tous les types</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Jour (07h - 19h)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Nuit (19h - 07h)</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="filterStatus">
+               <item>
+                <property name="text">
+                 <string>Tous les statuts</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Planifiée</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>En cours</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Terminée</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Annulée</string>
+                </property>
+               </item>
+              </widget>
+             </item>
+             <item>
+              <widget class="QComboBox" name="comboTri">
+               <item>
+                <property name="text">
+                 <string>Tri : Date (Chronologique ↗)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Tri : Date (Plus récente ↘)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Tri : Type (Jour / Nuit)</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Tri : Statut</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Tri : Effectif (Moins bien couvertes ⚠️)</string>
+                </property>
+               </item>
+
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="addButton">
+               <property name="text">
+                <string>+ Planifier une Garde</string>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <!-- ADVANCED ACTION BAR -->
+           <item>
+            <layout class="QHBoxLayout" name="actionBarLayout">
+             <property name="spacing">
+              <number>10</number>
+             </property>
+             <item>
+              <widget class="QPushButton" name="btnStats">
+               <property name="text">
+                <string>📊  Statistiques &amp; Charge</string>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="styleSheet">
+                <string>background-color: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; border-radius: 7px; padding: 7px 14px; font-weight: bold;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnExportPdf">
+               <property name="text">
+                <string>📄  Exporter Planning PDF</string>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+               <property name="styleSheet">
+                <string>background-color: #FFFBEB; color: #B45309; border: 1px solid #FDE68A; border-radius: 7px; padding: 7px 14px; font-weight: bold;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="actionSpacer">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>40</width>
+                 <height>20</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </item>
+           <!-- GARDES TABLE -->
+           <item>
+            <widget class="QTableWidget" name="workshopTable">
+             <property name="columnCount">
+              <number>8</number>
+             </property>
+             <property name="rowCount">
+              <number>0</number>
+             </property>
+             <property name="alternatingRowColors">
+              <bool>true</bool>
+             </property>
+             <property name="selectionBehavior">
+              <enum>QAbstractItemView::SelectRows</enum>
+             </property>
+             <property name="selectionMode">
+              <enum>QAbstractItemView::SingleSelection</enum>
+             </property>
+             <property name="showGrid">
+              <bool>true</bool>
+             </property>
+             <attribute name="horizontalHeaderStretchLastSection">
+              <bool>true</bool>
+             </attribute>
+             <attribute name="verticalHeaderVisible">
+              <bool>false</bool>
+             </attribute>
+              <column>
+               <property name="text">
+                <string>ID Garde</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Date</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Type</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Horaires</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Couverture Effectif</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Chef de Garde</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Pompiers Affectes</string>
+               </property>
+              </column>
+
+              <column>
+               <property name="text">
+                <string>Statut</string>
+               </property>
+              </column>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <!-- RIGHT DETAILS PANEL -->
+        <item>
+         <widget class="QFrame" name="rightSidebar">
+          <property name="minimumSize">
+           <size>
+            <width>320</width>
+            <height>0</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>320</width>
+            <height>16777215</height>
+           </size>
+          </property>
+          <layout class="QVBoxLayout" name="rightLayout">
+           <property name="spacing">
+            <number>12</number>
+           </property>
+           <property name="leftMargin">
+            <number>20</number>
+           </property>
+           <property name="topMargin">
+            <number>22</number>
+           </property>
+           <property name="rightMargin">
+            <number>20</number>
+           </property>
+           <property name="bottomMargin">
+            <number>22</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="detailsTitle">
+             <property name="text">
+              <string>Détails de la Garde</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QFrame" name="selectedWorkshopCard">
+             <layout class="QVBoxLayout" name="workshopCardLayout">
+              <property name="spacing">
+               <number>8</number>
+              </property>
+              <property name="leftMargin">
+               <number>14</number>
+              </property>
+              <property name="topMargin">
+               <number>14</number>
+              </property>
+              <property name="rightMargin">
+               <number>14</number>
+              </property>
+              <property name="bottomMargin">
+               <number>14</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="selectedWorkshopTitle">
+                <property name="text">
+                 <string>Garde de Jour – 18/10/2026</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="pendingStatus">
+                <property name="text">
+                 <string>● En cours</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="details">
+             <property name="text">
+              <string>ID Garde : GRD-2026-001
+
+Date : 18/10/2026
+
+Type : Jour (12 heures)
+
+Heure Début : 07:00
+
+Heure Fin : 19:00
+
+Effectif requis : 8 pompiers
+
+Chef de garde : Lt. Karim Majri
+
+Véhicules : FPT-01, VSAV-02
+
+Secteur : Caserne Centrale</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="btnConsulter">
+              <property name="text">
+               <string>Consulter Details Complets</string>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
+              <property name="styleSheet">
+               <string>background-color: #F1F5F9; color: #1E293B; border: 1px solid #CBD5E1; border-radius: 7px; padding: 8px 12px; font-weight: bold;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="btnModifier">
+              <property name="text">
+               <string>Modifier la Garde</string>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
+              <property name="styleSheet">
+               <string>background-color: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; border-radius: 7px; padding: 8px 12px; font-weight: bold;</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="detailsButton">
+             <property name="text">
+              <string>👨‍🚒  Affecter des Pompiers</string>
+             </property>
+             <property name="cursor">
+              <cursorShape>PointingHandCursor</cursorShape>
+             </property>
+            </widget>
+           </item>
+           <item>
+             <widget class="QPushButton" name="btnSupprimer">
+              <property name="text">
+               <string>Supprimer la Garde</string>
+              </property>
+              <property name="cursor">
+               <cursorShape>PointingHandCursor</cursorShape>
+              </property>
+              <property name="styleSheet">
+               <string>background-color: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; border-radius: 7px; padding: 8px 12px; font-weight: bold;</string>
+              </property>
+             </widget>
+            </item>
+           <item>
+            <spacer name="rightSpacer">
+             <property name="orientation">
+              <enum>Qt::Vertical</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>20</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QFrame" name="statCardParticipation">
+             <layout class="QVBoxLayout" name="participationLayout">
+              <property name="spacing">
+               <number>6</number>
+              </property>
+              <property name="leftMargin">
+               <number>16</number>
+              </property>
+              <property name="topMargin">
+               <number>14</number>
+              </property>
+              <property name="rightMargin">
+               <number>16</number>
+              </property>
+              <property name="bottomMargin">
+               <number>14</number>
+              </property>
+              <item>
+               <widget class="QLabel" name="statTitleParticipation">
+                <property name="text">
+                 <string>Taux de Couverture des Gardes</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="statValueParticipation">
+                <property name="text">
+                 <string>100%</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- PAGE 1 : INTERVENTIONS -->
+      <widget class="QWidget" name="pageInterventions">
+       <layout class="QVBoxLayout" name="layIntervPage">
+        <property name="spacing">
+         <number>20</number>
+        </property>
+        <property name="leftMargin">
+         <number>35</number>
+        </property>
+        <property name="topMargin">
+         <number>30</number>
+        </property>
+        <property name="rightMargin">
+         <number>35</number>
+        </property>
+        <property name="bottomMargin">
+         <number>30</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="titleInterv">
+          <property name="text">
+           <string>Module Gestion des Interventions</string>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>20</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="subInterv">
+          <property name="text">
+           <string>Missions d'urgence, départs au feu et interventions de secours (RedFlame Caserne).</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- PAGE 2 : VÉHICULES -->
+      <widget class="QWidget" name="pageVehicules">
+       <layout class="QVBoxLayout" name="layVehiculePage">
+        <property name="spacing">
+         <number>20</number>
+        </property>
+        <property name="leftMargin">
+         <number>35</number>
+        </property>
+        <property name="topMargin">
+         <number>30</number>
+        </property>
+        <property name="rightMargin">
+         <number>35</number>
+        </property>
+        <property name="bottomMargin">
+         <number>30</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="titleVehicule">
+          <property name="text">
+           <string>Module Gestion des Véhicules</string>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>20</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="subVehicule">
+          <property name="text">
+           <string>Parc automobile d'intervention (Fourgons Pompe-Tonne FPT, Échelles Pivotantes EPA, Ambulances VSAV).</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- PAGE 3 : MATÉRIELS -->
+      <widget class="QWidget" name="pageMateriels">
+       <layout class="QVBoxLayout" name="layMaterielPage">
+        <property name="spacing">
+         <number>20</number>
+        </property>
+        <property name="leftMargin">
+         <number>35</number>
+        </property>
+        <property name="topMargin">
+         <number>30</number>
+        </property>
+        <property name="rightMargin">
+         <number>35</number>
+        </property>
+        <property name="bottomMargin">
+         <number>30</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="titleMateriel">
+          <property name="text">
+           <string>Module Gestion des Matériels &amp; Stocks</string>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>20</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="subMateriel">
+          <property name="text">
+           <string>Inventaire des équipements de sécurité incendie (extincteurs, RIA, lances, appareils respiratoires ARI).</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- PAGE 4 : EMPLOYÉS -->
+      <widget class="QWidget" name="pageEmployes">
+       <layout class="QVBoxLayout" name="layEmployePage">
+        <property name="spacing">
+         <number>20</number>
+        </property>
+        <property name="leftMargin">
+         <number>35</number>
+        </property>
+        <property name="topMargin">
+         <number>30</number>
+        </property>
+        <property name="rightMargin">
+         <number>35</number>
+        </property>
+        <property name="bottomMargin">
+         <number>30</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="titleEmploye">
+          <property name="text">
+           <string>Module Gestion des Employés &amp; Effectifs</string>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>20</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="subEmploye">
+          <property name="text">
+           <string>Gestion de la brigade (Officiers, Sous-officiers, Sapeurs, planning de garde et congés).</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+      <!-- PAGE 5 : MENU PRINCIPAL (HUB) -->
+      <widget class="QWidget" name="pageMenuPrincipal">
+       <layout class="QVBoxLayout" name="layMenuPrinc">
+        <property name="spacing">
+         <number>20</number>
+        </property>
+        <property name="leftMargin">
+         <number>35</number>
+        </property>
+        <property name="topMargin">
+         <number>30</number>
+        </property>
+        <property name="rightMargin">
+         <number>35</number>
+        </property>
+        <property name="bottomMargin">
+         <number>30</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="titleHub">
+          <property name="text">
+           <string>Centre de Commandement – A.X.I.S RedFlame</string>
+          </property>
+          <property name="font">
+           <font>
+            <pointsize>22</pointsize>
+            <bold>true</bold>
+           </font>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="subHub">
+          <property name="text">
+           <string>Système centralisé de la caserne de pompiers. Sélectionnez un module ci-dessous :</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridHub">
+          <property name="spacing">
+           <number>18</number>
+          </property>
+          <!-- CARD GARDES -->
+          <item row="0" column="0">
+           <widget class="QFrame" name="hubCardGardes">
+            <property name="styleSheet">
+             <string>background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px;</string>
+            </property>
+            <layout class="QVBoxLayout" name="layHG1">
+             <item>
+              <widget class="QLabel" name="lblHTitle1">
+               <property name="text">
+                <string>&lt;b style=&quot;font-size:13pt; color:#D9363E;&quot;&gt;🛡️ Gestion des Gardes&lt;/b&gt;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="lblHDesc1">
+               <property name="text">
+                <string>Planification des permanences, tours de veille jour/nuit et gestion des effectifs de garde.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnGoGardes">
+               <property name="text">
+                <string>Ouvrir Gestion des Gardes →</string>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- CARD INTERVENTIONS -->
+          <item row="0" column="1">
+           <widget class="QFrame" name="hubCardInterv">
+            <property name="styleSheet">
+             <string>background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px;</string>
+            </property>
+            <layout class="QVBoxLayout" name="layHC2">
+             <item>
+              <widget class="QLabel" name="lblHTitle2">
+               <property name="text">
+                <string>&lt;b style=&quot;font-size:13pt; color:#142238;&quot;&gt;🚨 Interventions&lt;/b&gt;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="lblHDesc2">
+               <property name="text">
+                <string>Suivi opérationnel des feux, secours d'urgence et rapports d'intervention en temps réel.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnGoInterv">
+               <property name="text">
+                <string>Ouvrir Interventions →</string>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- CARD VEHICULES -->
+          <item row="1" column="0">
+           <widget class="QFrame" name="hubCardVehic">
+            <property name="styleSheet">
+             <string>background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px;</string>
+            </property>
+            <layout class="QVBoxLayout" name="layHC3">
+             <item>
+              <widget class="QLabel" name="lblHTitle3">
+               <property name="text">
+                <string>&lt;b style=&quot;font-size:13pt; color:#142238;&quot;&gt;🚒 Véhicules&lt;/b&gt;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="lblHDesc3">
+               <property name="text">
+                <string>Disponibilité des fourgons, ambulances et maintenance préventive des engins.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnGoVehic">
+               <property name="text">
+                <string>Ouvrir Véhicules →</string>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- CARD MATERIELS -->
+          <item row="1" column="1">
+           <widget class="QFrame" name="hubCardMateriel">
+            <property name="styleSheet">
+             <string>background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px;</string>
+            </property>
+            <layout class="QVBoxLayout" name="layHC4">
+             <item>
+              <widget class="QLabel" name="lblHTitle4">
+               <property name="text">
+                <string>&lt;b style=&quot;font-size:13pt; color:#142238;&quot;&gt;🧯 Matériels &amp; Stocks&lt;/b&gt;</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="lblHDesc4">
+               <property name="text">
+                <string>Contrôle des stocks d'extincteurs, tuyaux, masques respiratoires et réapprovisionnements.</string>
+               </property>
+               <property name="wordWrap">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnGoMateriel">
+               <property name="text">
+                <string>Ouvrir Matériels →</string>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+          <!-- CARD EMPLOYES -->
+          <item row="2" column="0" colspan="2">
+           <widget class="QFrame" name="hubCardEmploye">
+            <property name="styleSheet">
+             <string>background: white; border: 1px solid #E2E8F0; border-radius: 12px; padding: 18px;</string>
+            </property>
+            <layout class="QHBoxLayout" name="layHC5">
+             <item>
+              <layout class="QVBoxLayout" name="layHC5Text">
+               <item>
+                <widget class="QLabel" name="lblHTitle5">
+                 <property name="text">
+                  <string>&lt;b style=&quot;font-size:13pt; color:#142238;&quot;&gt;👨‍🚒 Effectifs &amp; Gardes (Employés)&lt;/b&gt;</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QLabel" name="lblHDesc5">
+                 <property name="text">
+                  <string>Gestion des sapeurs-pompiers, grades, disponibilités, heures de garde et congés.</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QPushButton" name="btnGoEmploye">
+               <property name="text">
+                <string>Ouvrir Employés →</string>
+               </property>
+               <property name="cursor">
+                <cursorShape>PointingHandCursor</cursorShape>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <spacer name="spHubBottom">
+          <property name="orientation">
+           <enum>Qt::Vertical</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size>
+            <width>20</width>
+            <height>40</height>
+           </size>
+          </property>
+         </spacer>
+        </item>
+       </layout>
+      </widget>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

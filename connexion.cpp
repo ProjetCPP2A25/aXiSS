@@ -5,6 +5,8 @@
 #include <QSqlError>
 #include <QStandardPaths>
 #include <QDir>
+#include <QDateTime>
+#include <QStringList>
 
 bool Connexion::ouvrir(QString &erreur)
 {
@@ -34,6 +36,24 @@ bool Connexion::ouvrir(QString &erreur)
            "id INTEGER PRIMARY KEY AUTOINCREMENT, id_employe TEXT NOT NULL, nom_employe TEXT, "
            "details TEXT, jours INTEGER, statut TEXT, "
            "FOREIGN KEY(id_employe) REFERENCES employes(id) ON DELETE CASCADE)");
+    // Table « vehicules » : si une ancienne table au schéma différent existe déjà, elle est conservée
+    // sous un autre nom (sauvegarde) et une table conforme au module Véhicules est recréée.
+    {
+        QStringList colonnes;
+        q.exec("PRAGMA table_info(vehicules)");
+        while (q.next()) colonnes << q.value(1).toString().toLower();
+        const QStringList requises = {"id", "immatriculation", "type", "km", "etat", "dispo",
+                                      "derniere_maint", "prochaine_maint", "assurance", "visite_tech"};
+        bool compatible = true;
+        for (const QString &c : requises) if (!colonnes.contains(c)) compatible = false;
+        if (!colonnes.isEmpty() && !compatible)
+            q.exec("ALTER TABLE vehicules RENAME TO vehicules_sauvegarde_"
+                   + QDateTime::currentDateTime().toString("yyyyMMddHHmmss"));
+    }
+    q.exec("CREATE TABLE IF NOT EXISTS vehicules("
+           "id TEXT PRIMARY KEY, immatriculation TEXT NOT NULL, type TEXT NOT NULL, km INTEGER NOT NULL DEFAULT 0, "
+           "etat TEXT NOT NULL, dispo TEXT NOT NULL, derniere_maint TEXT, prochaine_maint TEXT, "
+           "assurance TEXT, visite_tech TEXT)");
     q.exec("PRAGMA foreign_keys = ON");
     q.exec("CREATE INDEX IF NOT EXISTS idx_employes_nom ON employes(nom)");
 

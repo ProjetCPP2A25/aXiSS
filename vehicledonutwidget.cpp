@@ -1,27 +1,27 @@
-#include "vehiculedonut.h"
+#include "vehicledonutwidget.h"
 #include <QPainter>
 #include <QPen>
 #include <QtMath>
 
-VehiculeDonutWidget::VehiculeDonutWidget(QWidget *parent) : QWidget(parent)
+VehicleDonutWidget::VehicleDonutWidget(QWidget *parent) : QWidget(parent)
 {
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     setFixedSize(100, 100);
 }
 
-void VehiculeDonutWidget::setSlices(const QVector<VehiculeSlice> &slices)
+void VehicleDonutWidget::setSlices(const QVector<VehicleSlice> &slices)
 {
     m_slices = slices;
     update();
 }
 
-void VehiculeDonutWidget::paintEvent(QPaintEvent *)
+void VehicleDonutWidget::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing);
 
     int total = 0;
-    for (const VehiculeSlice &s : m_slices) total += s.value;
+    for (const VehicleSlice &s : m_slices) total += s.value;
 
     const int side = qMin(width(), height());
     const qreal pw = side * 0.17;
@@ -38,7 +38,7 @@ void VehiculeDonutWidget::paintEvent(QPaintEvent *)
         p.drawEllipse(r);
     } else {
         int start = 90 * 16;
-        for (const VehiculeSlice &s : m_slices) {
+        for (const VehicleSlice &s : m_slices) {
             if (s.value <= 0) continue;
             const int span = -qRound(5760.0 * s.value / total);
             pen.setColor(s.color);

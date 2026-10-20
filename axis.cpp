@@ -16,7 +16,9 @@
 #include <memory>
 #include <QScrollArea>
 #include "interventionpage.h"
-#include "vehiculepage.h"
+#include "vehiclespage.h"
+#include "materielpage.h"
+#include "grade.h"
 #include "sidebar.h"
 // ===== MODULE EMPLOYÉS (fin des includes) =====
 
@@ -103,12 +105,8 @@ AXIS::AXIS(QWidget *parent)
 {
     ui->setupUi(this);
 
-
-    setWindowTitle("A.X.I.S - RedFlame Protection");
-
-    // ===== MODULE EMPLOYÉS : initialisation (à copier dans le constructeur, après ui->setupUi(this)) =====
     // ===== MODULE MATÉRIELS =====
-    if (QLayout *old = ui->PMateriel->layout()) {   // نفسخو الـ layout القديم إذا موجود
+    if (QLayout *old = ui->PMateriel->layout()) {
         while (QLayoutItem *it = old->takeAt(0)) {
             if (it->widget()) it->widget()->deleteLater();
             delete it;
@@ -120,27 +118,20 @@ AXIS::AXIS(QWidget *parent)
     layoutMateriel->setContentsMargins(0, 0, 0, 0);
     layoutMateriel->addWidget(materielPage_);
 
+    setWindowTitle("A.X.I.S - RedFlame Protection");
+
+    // ===== MODULE EMPLOYÉS : initialisation (à copier dans le constructeur, après ui->setupUi(this)) =====
+    // Les pages PInterv et PVehicule du .ui contiennent déjà un layout vide (marges à 0)
     interventionPage_ = new InterventionPage(ui->PInterv);
+    ui->PInterv->layout()->addWidget(interventionPage_);
 
-    auto *layoutIntervention = new QVBoxLayout(ui->PInterv);
-    layoutIntervention->setContentsMargins(0, 0, 0, 0);
-    layoutIntervention->addWidget(interventionPage_);
+    vehiclesPage_ = new VehiclesPage(ui->PVehicule);
+    ui->PVehicule->layout()->addWidget(vehiclesPage_);
 
-    // ===== MODULE VÉHICULES : remplace la page provisoire de PVehicule =====
-    ui->lblTitreVehicule->deleteLater();
-    ui->lblInfoVehicule->deleteLater();
-    ui->btnRetourMenuVehicule->deleteLater();
-    if (QLayout *old = ui->PVehicule->layout()) {
-        while (QLayoutItem *it = old->takeAt(0)) {
-            if (it->widget()) it->widget()->deleteLater();
-            delete it;
-        }
-        delete old;
-    }
-    vehiculePage_ = new VehiculePage(ui->PVehicule);
-    auto *layoutVehicule = new QVBoxLayout(ui->PVehicule);
-    layoutVehicule->setContentsMargins(0, 0, 0, 0);
-    layoutVehicule->addWidget(vehiculePage_);
+    // ===== MODULE GARDES : intégration de Grade dans PGarde =====
+    grade_ = new Grade(ui->PGarde);
+    grade_->setWindowFlags(Qt::Widget);
+    ui->PGarde->layout()->addWidget(grade_);
 
     // Barre latérale du module Employés (même structure que celle des interventions), à gauche de la page CRUD
     sidebarEmpl_ = new SidebarFrame(ui->PCrudEmpl);
@@ -190,6 +181,7 @@ AXIS::AXIS(QWidget *parent)
     connect(ui->btnMenuInterv, &QPushButton::clicked, this, [this] { allerAuModule(1); });
     connect(ui->btnMenuVehicule, &QPushButton::clicked, this, [this] { allerAuModule(2); });
     connect(ui->btnMenuMateriel, &QPushButton::clicked, this, [this] { allerAuModule(3); });
+    connect(ui->btnMenuGrade, &QPushButton::clicked, this, [this] { allerAuModule(4); });
     connect(ui->btnQuitterMenuEmpl, &QPushButton::clicked, this, &AXIS::deconnexionEmploye);
     // Barre latérale du module Employés
     connect(sidebarEmpl_, &SidebarFrame::menuRequested, this, &AXIS::allerAuMenu);
@@ -199,10 +191,9 @@ AXIS::AXIS(QWidget *parent)
     connect(interventionPage_, &InterventionPage::logoutRequested, this, &AXIS::deconnexionEmploye);
     connect(materielPage_, &MaterielPage::menuRequested, this, &AXIS::allerAuMenu);
     connect(materielPage_, &MaterielPage::logoutRequested, this, &AXIS::deconnexionEmploye);
-    connect(vehiculePage_, &VehiculePage::menuRequested, this, &AXIS::allerAuMenu);
-    connect(vehiculePage_, &VehiculePage::logoutRequested, this, &AXIS::deconnexionEmploye);
-    // Pages des autres modules (à remplacer par les widgets de vos camarades)
-    connect(ui->btnRetourMenuInterv, &QPushButton::clicked, this, &AXIS::allerAuMenu);
+    // Page Véhicules : boutons « Menu principal » et « Déconnexion »
+    connect(vehiclesPage_, &VehiclesPage::menuRequested, this, &AXIS::allerAuMenu);
+    connect(vehiclesPage_, &VehiclesPage::logoutRequested, this, &AXIS::deconnexionEmploye);
 
 
     // ----- Module Employés -----
@@ -273,7 +264,7 @@ void AXIS::appliquerDroits()
 {
     const QString connecte = QString("Connecté : %1 (%2)").arg(user_.nomComplet(), user_.poste);
     sidebarEmpl_->setInfo(connecte);
-    vehiculePage_->setInfo(connecte);
+    vehiclesPage_->setUserInfo(connecte);
     ui->lblConnecteMenuEmpl->setText(connecte);
     ui->lblBienvenueEmpl->setText("Bienvenue " + user_.nomComplet());
 
@@ -289,6 +280,9 @@ void AXIS::appliquerDroits()
         menu[i]->setEnabled(ok);
         menu[i]->setToolTip(ok ? QString() : "Accès refusé pour votre rôle (" + user_.poste + ")");
     }
+    // Le module Gardes est accessible à tous les rôles
+    ui->btnMenuGrade->setEnabled(true);
+    ui->btnMenuGrade->setToolTip(QString());
 
     // Alerte de surcharge : uniquement pour les rôles qui gèrent les employés
     timerSurcharge_->stop();
@@ -318,14 +312,17 @@ void AXIS::allerAuMenu()
 
 void AXIS::allerAuModule(int module)
 {
-    if (!Employe::aAcces(user_.poste, module)) return;
+    // Pour les modules 0-3, on vérifie les droits via Employe::aAcces.
+    // Le module 4 (Gardes) est accessible à tous les utilisateurs connectés.
+    if (module < 4 && !Employe::aAcces(user_.poste, module)) return;
     if (module == 0) {                              // module Employés : page CRUD
         ui->SWAxis->setCurrentIndex(0);
         ui->stackedWidgetEmpl->setCurrentIndex(3);
         rafraichirListe();
     } else {                                        // autres modules : pages du SWAxis
         ui->SWAxis->setCurrentIndex(module);
-        if (module == 2) vehiculePage_->reload();   // alertes de maintenance à jour
+        if (module == 2) vehiclesPage_->reload();   // relit la table « vehicules »
+        if (module == 3) materielPage_->refresh();
     }
 }
 

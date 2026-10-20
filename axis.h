@@ -2,13 +2,14 @@
 #include <QMainWindow>
 #include <QDateTime>
 #include "employe.h"
-#include "materielpage.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class AXIS; }
 QT_END_NAMESPACE
 
 class InterventionPage;
-class VehiculePage;
+class VehiclesPage;
+class MaterielPage;
+class Grade;
 class SidebarFrame;
 class QThread;
 class QTimer;
@@ -31,7 +32,7 @@ private:
     void deconnexionEmploye();
     void appliquerDroits();
     void envoyerMdpOublie();
-    void allerAuModule(int module);          // module : 0 Employés, 1 Interventions, 2 Véhicules, 3 Matériels
+    void allerAuModule(int module);          // module : 0 Employés, 1 Interventions, 2 Véhicules
     void allerAuMenu();
     void chargerLogo(QLabel *label, int largeur);
 
@@ -56,9 +57,10 @@ private:
     BarWidget *bars_ = nullptr;
     bool peutDecider_ = false;
     QTimer *timerSurcharge_ = nullptr;
+    InterventionPage *interventionPage_ = nullptr;
+    VehiclesPage *vehiclesPage_ = nullptr;
     MaterielPage *materielPage_ = nullptr;
-    InterventionPage *interventionPage_;
-    VehiculePage *vehiculePage_ = nullptr;
+    Grade *grade_ = nullptr;
     SidebarFrame *sidebarEmpl_ = nullptr;
     // ===== FIN MODULE EMPLOYÉS =====
 };
