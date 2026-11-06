@@ -1,0 +1,14 @@
+A.X.I.S - Gestion des interventions (RedFlame Protection)
+
+Les interventions sont stockees dans la table INTERVENTION de la base Oracle (source ODBC "AXIS_ODBC").
+Executer d'abord le script AXIS_interventions.sql (creation de la table, de ses contraintes et de 8 exemples).
+La connexion est un Singleton (classe Connection, connection.h / connection.cpp : Connection::instance()) et toutes les requetes SQL sont preparees
+(prepare + bindValue) dans la classe Intervention.
+
+Ouvrir CRUD.pro dans Qt Creator (qmake), compiler (marteau gris) puis executer (triangle vert).
+Le role de l'utilisateur connecte se transmet a la fenetre : GAxis w(role);
+seuls "Operateur de dispatch" et "Chef de caserne" accedent aux interventions.
+
+Deux classes : GAxis (interface, gaxis.h/.cpp/.ui) et Intervention (entite + CRUD, intervention.h/.cpp).
+Les metiers innovants (recherche GPS, tri, pagination, statistiques, zones a risque, carte, export Excel)
+sont retires pour le moment : leur code est conserve dans le dossier metiers_innovants (non compile).

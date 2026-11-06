@@ -1,0 +1,232 @@
+#include "gaxis.h"
+#include "./ui_gaxis.h"
+#include "exportexcel.h"
+#include "intervention.h"
+#include "interventiondialogs.h"
+#include "interventionform.h"
+#include "interventiontable.h"
+#include "mapview.h"
+#include "riskzones.h"
+#include "statspanel.h"
+
+#include <QPushButton>
+#include <QScrollBar>
+#include <QStatusBar>
+#include <QTimer>
+
+namespace {
+
+// Pages du QStackedWidget (même ordre que la barre latérale)
+enum Page { PageEmployes, PageInterventions, PageVehicules, PageMateriels };
+
+constexpr int kActualisationMs = 5 * 60 * 1000;     // vérification automatique toutes les 5 minutes
+
+// Styles des boutons de la barre latérale (module affiché / autres modules)
+const QString kNavActive = QStringLiteral(
+    "QPushButton { background-color: #FF1717; color: white; border: none; border-radius: 7px;"
+    "  text-align: left; padding-left: 12px; font-size: 14px; font-weight: bold; }");
+const QString kNavInactive = QStringLiteral(
+    "QPushButton { background-color: transparent; color: #E5E7EB; border: none;"
+    "  text-align: left; padding-left: 12px; font-size: 14px; }"
+    "QPushButton:hover { background-color: #30363C; border-radius: 7px; }");
+
+} // namespace
+
+GAxis::GAxis(const QString &role, QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::GAxis)
+{
+    ui->setupUi(this);
+
+    m_form = new InterventionForm(ui, this);
+    m_table = new InterventionTable(ui, this);
+    m_stats = new StatsPanel(ui);
+    m_zones = new RiskZones(ui, this);
+    m_map = new MapView(ui, this);
+
+    // Formulaire
+    connect(m_form, &InterventionForm::saveRequested, this, &GAxis::onSave);
+    connect(m_form, &InterventionForm::editCancelled, this,
+            [this] { statusBar()->showMessage(QStringLiteral("Modification annulée."), 3000); });
+
+    // Tableau et carte
+    connect(m_table, &InterventionTable::viewRequested, this, &GAxis::showDetails);
+    connect(m_table, &InterventionTable::editRequested, this, &GAxis::startEdit);
+    connect(m_table, &InterventionTable::deleteRequested, this, &GAxis::deleteIntervention);
+    connect(m_table, &InterventionTable::noMatch, this, [this] {
+        statusBar()->showMessage(QStringLiteral("Aucune intervention ne correspond à ces coordonnées GPS."), 3000);
+    });
+    connect(m_map, &MapView::interventionClicked, this, &GAxis::showDetails);
+
+    // Export
+    connect(ui->btnExporterInterventions, &QPushButton::clicked, this, &GAxis::onExport);
+
+    // Barre latérale : un bouton par module
+    connect(ui->btnEmployes, &QPushButton::clicked, this, [this] { showModule(PageEmployes); });
+    connect(ui->btnInterventions, &QPushButton::clicked, this, [this] { showModule(PageInterventions); });
+    connect(ui->btnVehicules, &QPushButton::clicked, this, [this] { showModule(PageVehicules); });
+    connect(ui->btnMateriels, &QPushButton::clicked, this, [this] { showModule(PageMateriels); });
+
+    // Contrôle d'accès : seuls l'opérateur de dispatch et le chef de caserne gèrent les interventions
+    const bool allowed = role.isEmpty() || Intervention::roleAutorise(role);
+    if (!allowed) {
+        ui->btnInterventions->setEnabled(false);
+        showModule(PageEmployes);
+        statusBar()->showMessage(
+            QStringLiteral("Accès refusé : le rôle « %1 » ne permet pas de gérer les interventions.").arg(role));
+        m_timer = nullptr;
+        return;
+    }
+    showModule(PageInterventions);
+
+    // Actualisation automatique en arrière-plan : zones à risque, météo et durées des interventions en cours
+    m_timer = new QTimer(this);
+    connect(m_timer, &QTimer::timeout, this, [this] { refreshAll(false); });
+    m_timer->start(kActualisationMs);
+
+    refreshAll(true);
+}
+
+GAxis::~GAxis()
+{
+    delete ui;
+}
+
+void GAxis::showModule(int page)
+{
+    ui->stackedWidgetInterventions->setCurrentIndex(page);
+
+    // Seul le bouton du module affiché est rouge
+    const QList<QPushButton *> buttons = {ui->btnEmployes, ui->btnInterventions, ui->btnVehicules, ui->btnMateriels};
+    for (int i = 0; i < buttons.size(); ++i)
+        buttons[i]->setStyleSheet(i == page ? kNavActive : kNavInactive);
+
+    if (page == PageInterventions) {
+        ui->scrollArea->verticalScrollBar()->setValue(0);
+        statusBar()->showMessage(QStringLiteral("Gestion des interventions"), 2500);
+    }
+}
+
+void GAxis::refreshAll(bool userAction)
+{
+    QString error = m_table->refresh();
+    if (error.isEmpty())
+        error = m_stats->refresh();
+    if (error.isEmpty())
+        error = m_zones->refresh();
+    if (error.isEmpty())
+        error = m_map->refresh();
+    reportError(error, userAction);
+}
+
+// Une erreur de la base est affichée dans une boîte de dialogue pour une action de l'utilisateur ;
+// pendant l'actualisation automatique, elle n'apparaît qu'une fois dans la barre d'état (pas de rafale de messages).
+void GAxis::reportError(const QString &error, bool userAction)
+{
+    if (error.isEmpty()) {
+        m_lastRefreshFailed = false;
+        return;
+    }
+    if (userAction || !m_lastRefreshFailed)
+        Dialogs::showError(this, QStringLiteral("Erreur de la base de données"), error);
+    else
+        statusBar()->showMessage(QStringLiteral("Base de données indisponible : actualisation impossible."), 4000);
+    m_lastRefreshFailed = true;
+}
+
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
+
+void GAxis::onSave()
+{
+    Intervention it;
+    QString error;
+    if (!m_form->read(it, error)) {
+        Dialogs::showWarning(this, QStringLiteral("Informations incomplètes"), error);
+        return;
+    }
+
+    if (m_form->isEditing()) {
+        it.id = m_form->editId();
+        if (!it.modifier(&error)) {
+            Dialogs::showError(this, QStringLiteral("Modification impossible"), error);
+            return;
+        }
+        statusBar()->showMessage(QStringLiteral("Intervention %1 modifiée.").arg(it.idText()), 4000);
+        m_form->endEdit();
+    } else {
+        if (!it.ajouter(&error)) {
+            Dialogs::showError(this, QStringLiteral("Ajout impossible"), error);
+            return;
+        }
+        statusBar()->showMessage(QStringLiteral("Intervention %1 ajoutée.").arg(it.idText()), 4000);
+        m_form->clear();
+    }
+    refreshAll(true);
+}
+
+void GAxis::showDetails(int id)
+{
+    Intervention it;
+    QString error;
+    if (!Intervention::afficher(id, it, &error)) {
+        Dialogs::showError(this, QStringLiteral("Affichage impossible"), error);
+        refreshAll(true);
+        return;
+    }
+    DetailsDialog dlg(it, this);
+    if (dlg.exec() == QDialog::Accepted)
+        startEdit(id);
+}
+
+void GAxis::startEdit(int id)
+{
+    Intervention it;
+    QString error;
+    if (!Intervention::afficher(id, it, &error)) {
+        Dialogs::showError(this, QStringLiteral("Modification impossible"), error);
+        refreshAll(true);
+        return;
+    }
+    m_form->startEdit(it);
+}
+
+void GAxis::deleteIntervention(int id)
+{
+    Intervention it;
+    QString error;
+    if (!Intervention::afficher(id, it, &error)) {
+        Dialogs::showError(this, QStringLiteral("Suppression impossible"), error);
+        refreshAll(true);
+        return;
+    }
+    // Confirmation obligatoire avant toute suppression
+    if (!Dialogs::confirmDelete(this, it))
+        return;
+
+    if (!Intervention::supprimer(id, &error)) {
+        Dialogs::showError(this, QStringLiteral("Suppression impossible"), error);
+        return;
+    }
+    if (m_form->isEditing() && m_form->editId() == id)
+        m_form->endEdit();
+    refreshAll(true);
+    statusBar()->showMessage(QStringLiteral("Intervention %1 supprimée.").arg(it.idText()), 4000);
+}
+
+// ---------------------------------------------------------------------------
+// Export Excel
+// ---------------------------------------------------------------------------
+
+void GAxis::onExport()
+{
+    // Toutes les interventions correspondant à la recherche et au tri (pas seulement la page affichée)
+    QString error;
+    const QVector<Intervention> rows = Intervention::lister(m_table->filtre(), 0, 0, &error);
+    if (!error.isEmpty()) {
+        Dialogs::showError(this, QStringLiteral("Export impossible"), error);
+        return;
+    }
+    ExportExcel::run(this, rows, ui->btnExporterInterventions);
+}

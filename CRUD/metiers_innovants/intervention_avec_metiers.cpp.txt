@@ -1,0 +1,445 @@
+#include "intervention.h"
+#include "helpers.h"
+
+#include <QHash>
+#include <QRegularExpression>
+#include <QSqlDatabase>
+#include <QSqlError>
+#include <QSqlQuery>
+
+#include <algorithm>
+
+namespace {
+
+// Toutes les requêtes SQL de l'application sont écrites dans cette classe (architecture modèle-vue).
+// Elles sont toutes préparées (prepare + bindValue) : les valeurs saisies ne sont jamais concaténées
+// dans le texte SQL, ce qui protège la base contre les injections SQL.
+const QString kColonnes = QStringLiteral(
+    "ID, TYPE_INTERVENTION, LIEU, GRAVITE, ETAT, LATITUDE, LONGITUDE, DATE_RECEPTION, DATE_FIN");
+
+// La connexion unique (patron Singleton, voir Intervention::ouvrirConnexion) doit avoir été ouverte au démarrage.
+bool baseOuverte(QString *erreur)
+{
+    if (QSqlDatabase::database().isOpen())
+        return true;
+    if (erreur)
+        *erreur = QStringLiteral("La connexion à la base de données n'est pas établie.");
+    return false;
+}
+
+void signaler(QString *erreur, const QString &contexte, const QSqlQuery &query)
+{
+    if (erreur)
+        *erreur = contexte + QStringLiteral("\n") + query.lastError().text();
+}
+
+// Date absente (intervention en cours) -> NULL en base
+QVariant dateOuNull(const QDateTime &d)
+{
+    return d.isValid() ? QVariant(d) : QVariant(QMetaType::fromType<QDateTime>());
+}
+
+// Ligne de résultat (colonnes dans l'ordre de kColonnes) -> objet Intervention
+Intervention depuisLigne(const QSqlQuery &q)
+{
+    Intervention i;
+    i.id = q.value(0).toInt();
+    i.type = q.value(1).toString();
+    i.lieu = q.value(2).toString();
+    i.gravite = q.value(3).toString();
+    i.etat = q.value(4).toString();
+    i.lat = q.value(5).toDouble();
+    i.lon = q.value(6).toDouble();
+    i.reception = q.value(7).toDateTime();
+    i.fin = q.value(8).isNull() ? QDateTime() : q.value(8).toDateTime();
+    return i;
+}
+
+// Lit toutes les interventions de la table (requête préparée, sans paramètre)
+QVector<Intervention> lireToutes(QString *erreur)
+{
+    QVector<Intervention> lignes;
+    if (!baseOuverte(erreur))
+        return lignes;
+
+    QSqlQuery query;
+    query.setForwardOnly(true);
+    query.prepare(QStringLiteral("SELECT ") + kColonnes + QStringLiteral(" FROM INTERVENTION ORDER BY ID"));
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Lecture des interventions impossible."), query);
+        return {};
+    }
+    while (query.next())
+        lignes.push_back(depuisLigne(query));
+    return lignes;
+}
+
+// Poids de la gravité : 1 = faible, 2 = moyenne, 3 = élevée
+int graviteVersCode(const QString &g)
+{
+    if (g == Grav::Elevee)  return 3;
+    if (g == Grav::Moyenne) return 2;
+    return 1;
+}
+
+// Recherche par coordonnées GPS : "36.8065" (latitude ou longitude) ou "36.8065, 10.18" (les deux).
+bool correspond(const Intervention &i, const QString &gps)
+{
+    const QString texte = gps.trimmed();
+    if (texte.isEmpty())
+        return true;
+
+    static const QRegularExpression caracteresValides(QStringLiteral("^[-0-9.,;\\s]+$"));
+    if (!caracteresValides.match(texte).hasMatch())
+        return false;
+
+    QStringList parties;
+    for (const QString &p : texte.split(QRegularExpression(QStringLiteral("[,;]")), Qt::SkipEmptyParts)) {
+        const QString nettoyee = QString(p).remove(QRegularExpression(QStringLiteral("\\s")));
+        if (!nettoyee.isEmpty())
+            parties << nettoyee;
+    }
+    if (parties.isEmpty())
+        return false;
+
+    const QString latitude = QString::number(i.lat, 'f', 4);
+    const QString longitude = QString::number(i.lon, 'f', 4);
+    if (parties.size() >= 2)
+        return latitude.contains(parties[0]) && longitude.contains(parties[1]);
+    return latitude.contains(parties[0]) || longitude.contains(parties[0]);
+}
+
+QVector<Intervention> filtrer(const Intervention::Filtre &filtre, QString *erreur)
+{
+    QVector<Intervention> res;
+    const QVector<Intervention> toutes = lireToutes(erreur);
+    for (const Intervention &i : toutes)
+        if (correspond(i, filtre.gps))
+            res.push_back(i);
+
+    using T = Intervention::Tri;
+    switch (filtre.tri) {
+    case T::GraviteDecroissante:
+        std::stable_sort(res.begin(), res.end(), [](const Intervention &a, const Intervention &b) {
+            const int ga = graviteVersCode(a.gravite), gb = graviteVersCode(b.gravite);
+            if (ga != gb) return ga > gb;
+            if (a.reception != b.reception) return a.reception > b.reception;
+            return a.id < b.id;
+        });
+        break;
+    case T::GraviteCroissante:
+        std::stable_sort(res.begin(), res.end(), [](const Intervention &a, const Intervention &b) {
+            const int ga = graviteVersCode(a.gravite), gb = graviteVersCode(b.gravite);
+            if (ga != gb) return ga < gb;
+            if (a.reception != b.reception) return a.reception > b.reception;
+            return a.id < b.id;
+        });
+        break;
+    case T::PlusRecentes:
+        std::stable_sort(res.begin(), res.end(), [](const Intervention &a, const Intervention &b) {
+            if (a.reception != b.reception) return a.reception > b.reception;
+            return a.id > b.id;
+        });
+        break;
+    case T::Aucun:
+        std::stable_sort(res.begin(), res.end(),
+                         [](const Intervention &a, const Intervention &b) { return a.id < b.id; });
+        break;
+    }
+    return res;
+}
+
+} // namespace
+
+// ---------------------------------------------------------------------------------------------
+// Valeurs calculées
+// ---------------------------------------------------------------------------------------------
+
+QString Intervention::idText() const
+{
+    return QStringLiteral("I%1").arg(id, 3, 10, QChar('0'));
+}
+
+QString Intervention::gps() const
+{
+    return QString::number(lat, 'f', 4) + QStringLiteral(", ") + QString::number(lon, 'f', 4);
+}
+
+qint64 Intervention::dureeMinutes() const
+{
+    const QDateTime fin_ = fin.isValid() ? fin : QDateTime::currentDateTime();
+    return std::max<qint64>(0, reception.secsTo(fin_) / 60);
+}
+
+QString Intervention::dureeTexte() const
+{
+    return Helpers::formatDuration(dureeMinutes());
+}
+
+int Intervention::graviteRang() const
+{
+    if (gravite == Grav::Elevee)  return 0;
+    if (gravite == Grav::Moyenne) return 1;
+    return 2;
+}
+
+bool Intervention::valider(QString *erreur) const
+{
+    auto refuser = [erreur](const QString &message) {
+        if (erreur)
+            *erreur = message;
+        return false;
+    };
+
+    if (type.trimmed().isEmpty())
+        return refuser(QStringLiteral("Veuillez choisir le type de l'intervention."));
+    if (lieu.trimmed().isEmpty())
+        return refuser(QStringLiteral("Veuillez saisir le lieu de l'intervention."));
+    if (lieu.size() > 100)
+        return refuser(QStringLiteral("Le lieu ne doit pas dépasser 100 caractères."));
+    if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0)
+        return refuser(QStringLiteral("Coordonnées GPS hors limites."));
+    if (!reception.isValid())
+        return refuser(QStringLiteral("La date de réception de l'alerte est obligatoire."));
+    if (etat == Etat::Terminee) {
+        if (!fin.isValid())
+            return refuser(QStringLiteral("La date de fin est obligatoire pour une intervention terminée."));
+        if (fin < reception)
+            return refuser(QStringLiteral("La date de fin doit être postérieure à la réception de l'alerte."));
+    }
+    return true;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Connexion unique à la base (patron Singleton)
+// ---------------------------------------------------------------------------------------------
+
+namespace {
+QString &erreurOuverture()
+{
+    static QString erreur;
+    return erreur;
+}
+} // namespace
+
+bool Intervention::ouvrirConnexion()
+{
+    if (QSqlDatabase::contains() && QSqlDatabase::database().isOpen())
+        return true;
+
+    // Paramètres d'origine du projet (Oracle via ODBC) ; les variables d'environnement
+    // AXIS_DB_DRIVER, AXIS_DB_DSN, AXIS_DB_USER et AXIS_DB_PASSWORD permettent de les remplacer.
+    QSqlDatabase db = QSqlDatabase::contains()
+        ? QSqlDatabase::database(QSqlDatabase::defaultConnection, false)
+        : QSqlDatabase::addDatabase(qEnvironmentVariable("AXIS_DB_DRIVER", QStringLiteral("QODBC")));
+
+    db.setDatabaseName(qEnvironmentVariable("AXIS_DB_DSN", QStringLiteral("AXIS_ODBC")));
+    db.setUserName(qEnvironmentVariable("AXIS_DB_USER", QStringLiteral("AXIS")));
+
+    // Temporary local test: enter your group's password here.
+    db.setPassword(qEnvironmentVariable("AXIS_DB_PASSWORD", QStringLiteral("1234")));
+
+    if (!db.open()) {
+        erreurOuverture() = db.lastError().text();
+        return false;
+    }
+    erreurOuverture().clear();
+    return true;
+}
+
+QString Intervention::erreurConnexion()
+{
+    return erreurOuverture();
+}
+
+// ---------------------------------------------------------------------------------------------
+// CRUD (table INTERVENTION, requêtes préparées)
+// ---------------------------------------------------------------------------------------------
+
+bool Intervention::ajouter(QString *erreur)
+{
+    // Contrôle de saisie dans le code C++ (les contraintes de la table le répètent côté base)
+    if (!valider(erreur) || !baseOuverte(erreur))
+        return false;
+
+    // Prochain identifiant
+    QSqlQuery suivant;
+    suivant.prepare(QStringLiteral("SELECT COALESCE(MAX(ID), 0) + 1 FROM INTERVENTION"));
+    if (!suivant.exec() || !suivant.next()) {
+        signaler(erreur, QStringLiteral("Ajout impossible : identifiant non attribué."), suivant);
+        return false;
+    }
+    const int nouvelId = suivant.value(0).toInt();
+
+    QSqlQuery query;
+    query.prepare(QStringLiteral(
+        "INSERT INTO INTERVENTION (") + kColonnes + QStringLiteral(") "
+        "VALUES (:id, :type, :lieu, :gravite, :etat, :lat, :lon, :reception, :fin)"));
+    query.bindValue(QStringLiteral(":id"), nouvelId);
+    query.bindValue(QStringLiteral(":type"), type);
+    query.bindValue(QStringLiteral(":lieu"), lieu);
+    query.bindValue(QStringLiteral(":gravite"), gravite);
+    query.bindValue(QStringLiteral(":etat"), etat);
+    query.bindValue(QStringLiteral(":lat"), lat);
+    query.bindValue(QStringLiteral(":lon"), lon);
+    query.bindValue(QStringLiteral(":reception"), reception);
+    query.bindValue(QStringLiteral(":fin"), dateOuNull(etat == Etat::Terminee ? fin : QDateTime()));
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Ajout impossible."), query);
+        return false;
+    }
+    id = nouvelId;
+    return true;
+}
+
+bool Intervention::afficher(int id, Intervention &resultat, QString *erreur)
+{
+    if (!baseOuverte(erreur))
+        return false;
+
+    QSqlQuery query;
+    query.prepare(QStringLiteral("SELECT ") + kColonnes + QStringLiteral(" FROM INTERVENTION WHERE ID = :id"));
+    query.bindValue(QStringLiteral(":id"), id);
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Lecture de l'intervention impossible."), query);
+        return false;
+    }
+    if (query.next()) {
+        resultat = depuisLigne(query);
+        return true;
+    }
+    if (erreur)
+        *erreur = QStringLiteral("L'intervention demandée n'existe plus.");
+    return false;
+}
+
+bool Intervention::modifier(QString *erreur) const
+{
+    if (!valider(erreur) || !baseOuverte(erreur))
+        return false;
+
+    QSqlQuery query;
+    query.prepare(QStringLiteral(
+        "UPDATE INTERVENTION SET TYPE_INTERVENTION = :type, LIEU = :lieu, GRAVITE = :gravite, ETAT = :etat, "
+        "LATITUDE = :lat, LONGITUDE = :lon, DATE_RECEPTION = :reception, DATE_FIN = :fin "
+        "WHERE ID = :id"));
+    query.bindValue(QStringLiteral(":type"), type);
+    query.bindValue(QStringLiteral(":lieu"), lieu);
+    query.bindValue(QStringLiteral(":gravite"), gravite);
+    query.bindValue(QStringLiteral(":etat"), etat);
+    query.bindValue(QStringLiteral(":lat"), lat);
+    query.bindValue(QStringLiteral(":lon"), lon);
+    query.bindValue(QStringLiteral(":reception"), reception);
+    query.bindValue(QStringLiteral(":fin"), dateOuNull(etat == Etat::Terminee ? fin : QDateTime()));
+    query.bindValue(QStringLiteral(":id"), id);
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Modification impossible."), query);
+        return false;
+    }
+    if (query.numRowsAffected() == 0) {
+        if (erreur)
+            *erreur = QStringLiteral("L'intervention %1 n'existe plus : modification impossible.").arg(idText());
+        return false;
+    }
+    return true;
+}
+
+bool Intervention::supprimer(int id, QString *erreur)
+{
+    if (!baseOuverte(erreur))
+        return false;
+
+    QSqlQuery query;
+    query.prepare(QStringLiteral("DELETE FROM INTERVENTION WHERE ID = :id"));
+    query.bindValue(QStringLiteral(":id"), id);
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Suppression impossible."), query);
+        return false;
+    }
+    if (query.numRowsAffected() == 0) {
+        if (erreur)
+            *erreur = QStringLiteral("L'intervention demandée n'existe plus.");
+        return false;
+    }
+    return true;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Fonctionnalités avancées (filtre, tri, pagination, statistiques, zones à risque)
+// ---------------------------------------------------------------------------------------------
+
+QVector<Intervention> Intervention::lister(const Filtre &filtre, int debut, int nombre, QString *erreur)
+{
+    QVector<Intervention> lignes = filtrer(filtre, erreur);
+    if (nombre <= 0)
+        return lignes;
+    if (debut >= lignes.size())
+        return {};
+    return lignes.mid(std::max(0, debut), nombre);
+}
+
+int Intervention::compter(const Filtre &filtre, QString *erreur)
+{
+    return int(filtrer(filtre, erreur).size());
+}
+
+QMap<QString, int> Intervention::statistiquesParGravite(QString *erreur)
+{
+    QMap<QString, int> resultat{{Grav::Elevee, 0}, {Grav::Moyenne, 0}, {Grav::Faible, 0}};
+    if (!baseOuverte(erreur))
+        return resultat;
+
+    QSqlQuery query;
+    query.prepare(QStringLiteral("SELECT GRAVITE, COUNT(*) FROM INTERVENTION GROUP BY GRAVITE"));
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Calcul des statistiques impossible."), query);
+        return resultat;
+    }
+    while (query.next()) {
+        const int code = graviteVersCode(query.value(0).toString());
+        resultat[code >= 3 ? Grav::Elevee : code == 2 ? Grav::Moyenne : Grav::Faible] += query.value(1).toInt();
+    }
+    return resultat;
+}
+
+// Historique par lieu depuis la date donnée : nombre d'interventions, gravité cumulée, position moyenne.
+QVector<Intervention::ZoneAgregee> Intervention::zonesARisque(const QDateTime &depuis, QString *erreur)
+{
+    QVector<ZoneAgregee> zones;
+    if (!baseOuverte(erreur))
+        return zones;
+
+    QSqlQuery query;
+    query.prepare(QStringLiteral(
+        "SELECT LIEU, GRAVITE, LATITUDE, LONGITUDE FROM INTERVENTION WHERE DATE_RECEPTION >= :depuis"));
+    query.bindValue(QStringLiteral(":depuis"), depuis);
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Détection des zones à risque impossible."), query);
+        return zones;
+    }
+
+    QHash<QString, ZoneAgregee> parLieu;
+    while (query.next()) {
+        const QString lieuLu = query.value(0).toString();
+        const QString cle = lieuLu.toLower();
+        ZoneAgregee &z = parLieu[cle];
+        z.cle = cle;
+        if (z.nom.isEmpty() || lieuLu < z.nom)
+            z.nom = lieuLu;
+        z.nombre += 1;
+        z.poids += graviteVersCode(query.value(1).toString());
+        z.lat += query.value(2).toDouble();
+        z.lon += query.value(3).toDouble();
+    }
+    for (ZoneAgregee z : std::as_const(parLieu)) {
+        z.lat /= z.nombre;
+        z.lon /= z.nombre;
+        zones.push_back(z);
+    }
+    return zones;
+}
+
+bool Intervention::roleAutorise(const QString &role)
+{
+    return role == Role::OperateurDispatch || role == Role::ChefCaserne;
+}
