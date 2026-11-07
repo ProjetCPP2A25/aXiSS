@@ -1,0 +1,674 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>VehiculePage</class>
+ <widget class="QWidget" name="VehiculePage">
+  <property name="geometry"><rect><x>0</x><y>0</y><width>1000</width><height>900</height></rect></property>
+  <property name="minimumSize">
+   <size><width>900</width><height>0</height></size>
+  </property>
+  <layout class="QVBoxLayout" name="rootLayout">
+   <property name="spacing">
+    <number>14</number>
+   </property>
+   <property name="leftMargin">
+    <number>20</number>
+   </property>
+   <property name="topMargin">
+    <number>16</number>
+   </property>
+   <property name="rightMargin">
+    <number>20</number>
+   </property>
+   <property name="bottomMargin">
+    <number>20</number>
+   </property>
+   <item>
+    <layout class="QHBoxLayout" name="headLayout">
+     <item>
+      <widget class="QLabel" name="pageTitle">
+       <property name="text">
+        <string>Gestion des véhicules</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="headSpacer">
+       <property name="orientation">
+        <enum>Qt::Orientation::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size><width>20</width><height>40</height></size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="banner">
+       <property name="maximumSize">
+        <size><width>520</width><height>16777215</height></size>
+       </property>
+       <property name="visible">
+        <bool>false</bool>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="row1" stretch="0,1">
+     <property name="spacing">
+      <number>14</number>
+     </property>
+     <item alignment="Qt::AlignmentFlag::AlignTop">
+      <widget class="QFrame" name="formCard">
+       <property name="minimumSize">
+        <size><width>290</width><height>0</height></size>
+       </property>
+       <property name="maximumSize">
+        <size><width>290</width><height>16777215</height></size>
+       </property>
+       <property name="card" stdset="0">
+        <bool>true</bool>
+       </property>
+       <layout class="QVBoxLayout" name="formCardLayout">
+        <property name="spacing">
+         <number>6</number>
+        </property>
+        <property name="leftMargin">
+         <number>14</number>
+        </property>
+        <property name="topMargin">
+         <number>12</number>
+        </property>
+        <property name="rightMargin">
+         <number>14</number>
+        </property>
+        <property name="bottomMargin">
+         <number>14</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="formTitle">
+          <property name="text">
+           <string>Ajouter</string>
+          </property>
+          <property name="cardTitle" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblPlate">
+          <property name="text">
+           <string>Immatriculation</string>
+          </property>
+          <property name="fieldLabel" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="plateEdit">
+          <property name="placeholderText">
+           <string>123 TUN 4567</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblType">
+          <property name="text">
+           <string>Type</string>
+          </property>
+          <property name="fieldLabel" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="typeCombo">
+          <item>
+           <property name="text">
+            <string>Camion-citerne</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Ambulance</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Échelle aérienne</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Fourgon pompe</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Véhicule léger</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblKm">
+          <property name="text">
+           <string>Kilométrage</string>
+          </property>
+          <property name="fieldLabel" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="kmEdit">
+          <property name="placeholderText">
+           <string>42 300</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblEtat">
+          <property name="text">
+           <string>État</string>
+          </property>
+          <property name="fieldLabel" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="etatCombo">
+          <item>
+           <property name="text">
+            <string>Bon</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>À surveiller</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>Hors service</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblDispo">
+          <property name="text">
+           <string>Disponibilité</string>
+          </property>
+          <property name="fieldLabel" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QComboBox" name="dispoCombo">
+          <item>
+           <property name="text">
+            <string>Disponible</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>En intervention</string>
+           </property>
+          </item>
+          <item>
+           <property name="text">
+            <string>En maintenance</string>
+           </property>
+          </item>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblLast">
+          <property name="text">
+           <string>Dernière maintenance</string>
+          </property>
+          <property name="fieldLabel" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="lastMaintEdit">
+          <property name="placeholderText">
+           <string>jj/mm/aaaa</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblNext">
+          <property name="text">
+           <string>Prochaine maintenance</string>
+          </property>
+          <property name="fieldLabel" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="nextMaintEdit">
+          <property name="placeholderText">
+           <string>jj/mm/aaaa</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblIns">
+          <property name="text">
+           <string>Assurance valable jusqu'au</string>
+          </property>
+          <property name="fieldLabel" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="insuranceEdit">
+          <property name="placeholderText">
+           <string>jj/mm/aaaa</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblTech">
+          <property name="text">
+           <string>Prochaine visite technique</string>
+          </property>
+          <property name="fieldLabel" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLineEdit" name="techEdit">
+          <property name="placeholderText">
+           <string>jj/mm/aaaa</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <spacer name="formSpacer">
+          <property name="orientation">
+           <enum>Qt::Orientation::Vertical</enum>
+          </property>
+          <property name="sizeType">
+           <enum>QSizePolicy::Policy::Fixed</enum>
+          </property>
+          <property name="sizeHint" stdset="0">
+           <size><width>20</width><height>6</height></size>
+          </property>
+         </spacer>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="formButtons">
+          <item>
+           <widget class="QPushButton" name="btnAdd">
+            <property name="text">
+             <string>Ajouter</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnClear">
+            <property name="text">
+             <string>Vider</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="formBtnSpacer">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size><width>20</width><height>40</height></size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item alignment="Qt::AlignmentFlag::AlignTop">
+      <widget class="QFrame" name="listCard">
+       <property name="card" stdset="0">
+        <bool>true</bool>
+       </property>
+       <layout class="QVBoxLayout" name="listCardLayout">
+        <property name="spacing">
+         <number>6</number>
+        </property>
+        <property name="leftMargin">
+         <number>14</number>
+        </property>
+        <property name="topMargin">
+         <number>12</number>
+        </property>
+        <property name="rightMargin">
+         <number>14</number>
+        </property>
+        <property name="bottomMargin">
+         <number>14</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="listTitle">
+          <property name="text">
+           <string>Liste</string>
+          </property>
+          <property name="cardTitle" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="listToolbar" stretch="1,0,0">
+          <item>
+           <widget class="QComboBox" name="sortCombo">
+            <item>
+             <property name="text">
+              <string>Trier par kilométrage</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Trier par ID</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Trier par immatriculation</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>Trier par prochaine maintenance</string>
+             </property>
+            </item>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnPdf">
+            <property name="text">
+             <string>Exporter (PDF)</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="btnExcel">
+            <property name="text">
+             <string>Exporter (Excel)</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <widget class="QTableWidget" name="table">
+          <property name="focusPolicy">
+           <enum>Qt::FocusPolicy::NoFocus</enum>
+          </property>
+          <property name="verticalScrollBarPolicy">
+           <enum>Qt::ScrollBarPolicy::ScrollBarAlwaysOff</enum>
+          </property>
+          <property name="editTriggers">
+           <set>QAbstractItemView::EditTrigger::NoEditTriggers</set>
+          </property>
+          <property name="selectionMode">
+           <enum>QAbstractItemView::SelectionMode::NoSelection</enum>
+          </property>
+          <property name="showGrid">
+           <bool>false</bool>
+          </property>
+          <property name="wordWrap">
+           <bool>true</bool>
+          </property>
+          <attribute name="verticalHeaderVisible"><bool>false</bool></attribute>
+          <attribute name="verticalHeaderDefaultSectionSize"><number>58</number></attribute>
+          <column>
+           <property name="text">
+            <string>ID</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Immatriculation</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Type</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Km</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>État</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Disponibilité</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Dernière
+maint.</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Prochaine
+maint.</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Assurance</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Visite
+technique</string>
+           </property>
+          </column>
+          <column>
+           <property name="text">
+            <string>Actions</string>
+           </property>
+          </column>
+         </widget>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="statsRow" stretch="1,1">
+     <property name="spacing">
+      <number>14</number>
+     </property>
+     <item>
+      <widget class="QFrame" name="statsEtatCard">
+       <property name="card" stdset="0">
+        <bool>true</bool>
+       </property>
+       <layout class="QVBoxLayout" name="statsEtatCardLayout">
+        <property name="spacing">
+         <number>6</number>
+        </property>
+        <property name="leftMargin">
+         <number>14</number>
+        </property>
+        <property name="topMargin">
+         <number>12</number>
+        </property>
+        <property name="rightMargin">
+         <number>14</number>
+        </property>
+        <property name="bottomMargin">
+         <number>14</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="statsEtatTitle">
+          <property name="text">
+           <string>Statistiques par état du véhicule</string>
+          </property>
+          <property name="cardTitle" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblEtatSub">
+          <property name="text">
+           <string>Répartition par état</string>
+          </property>
+          <property name="muted" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="statsEtatCardRow">
+          <property name="spacing">
+           <number>18</number>
+          </property>
+          <item>
+           <widget class="VehiculeDonutWidget" name="donutEtat" native="true"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="legendEtat">
+            <property name="textFormat">
+             <enum>Qt::TextFormat::RichText</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="statsEtatCardStretch">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size><width>20</width><height>40</height></size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+     <item>
+      <widget class="QFrame" name="statsDispoCard">
+       <property name="card" stdset="0">
+        <bool>true</bool>
+       </property>
+       <layout class="QVBoxLayout" name="statsDispoCardLayout">
+        <property name="spacing">
+         <number>6</number>
+        </property>
+        <property name="leftMargin">
+         <number>14</number>
+        </property>
+        <property name="topMargin">
+         <number>12</number>
+        </property>
+        <property name="rightMargin">
+         <number>14</number>
+        </property>
+        <property name="bottomMargin">
+         <number>14</number>
+        </property>
+        <item>
+         <widget class="QLabel" name="statsDispoTitle">
+          <property name="text">
+           <string>Statistiques par disponibilité</string>
+          </property>
+          <property name="cardTitle" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="lblDispoSub">
+          <property name="text">
+           <string>Répartition par disponibilité</string>
+          </property>
+          <property name="muted" stdset="0">
+           <bool>true</bool>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="statsDispoCardRow">
+          <property name="spacing">
+           <number>18</number>
+          </property>
+          <item>
+           <widget class="VehiculeDonutWidget" name="donutDispo" native="true"/>
+          </item>
+          <item>
+           <widget class="QLabel" name="legendDispo">
+            <property name="textFormat">
+             <enum>Qt::TextFormat::RichText</enum>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <spacer name="statsDispoCardStretch">
+            <property name="orientation">
+             <enum>Qt::Orientation::Horizontal</enum>
+            </property>
+            <property name="sizeHint" stdset="0">
+             <size><width>20</width><height>40</height></size>
+            </property>
+           </spacer>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <spacer name="rootSpacer">
+     <property name="orientation">
+      <enum>Qt::Orientation::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size><width>20</width><height>40</height></size>
+     </property>
+    </spacer>
+   </item>
+  </layout>
+ </widget>
+ <customwidgets>
+  <customwidget>
+   <class>VehiculeDonutWidget</class>
+   <extends>QWidget</extends>
+   <header>vehiculedonut.h</header>
+  </customwidget>
+ </customwidgets>
+ <resources/>
+ <connections/>
+</ui>

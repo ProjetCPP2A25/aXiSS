@@ -1,0 +1,47 @@
+/* ===== style.qss : charte graphique A.X.I.S (rouge / noir / gris / blanc) ===== */
+
+QWidget { color: #e8e8e8; font-family: "Segoe UI", Arial; font-size: 13px; }
+
+QMainWindow, #centralwidget, QWidget[content="true"] { background: #0f1115; }
+QWidget[sidebar="true"] { background: #16181d; }
+
+/* Cartes / panneaux */
+QFrame[panel="true"] { background: #16181d; border: 1px solid #2a2d34; border-radius: 10px; }
+
+/* Textes */
+QLabel { background: transparent; }
+QLabel[logo="true"]  { font-size: 26px; font-weight: bold; color: white; }
+QLabel[h1="true"]    { font-size: 22px; font-weight: bold; color: white; }
+QLabel[h2="true"]    { font-size: 15px; font-weight: bold; color: #c00000; }
+QLabel[muted="true"] { font-size: 12px; color: #aaaaaa; }
+QLabel[alert="true"] { background: #f6dcc0; color: #4a2a00; border-left: 4px solid #e08a00; border-radius: 4px; padding: 8px 12px; }
+
+/* Champs de saisie */
+QLineEdit, QComboBox, QSpinBox, QDateEdit { background: #0f1115; border: 1px solid #2a2d34; border-radius: 6px; padding: 7px; }
+QSpinBox, QDateEdit { min-width: 70px; }
+QLineEdit:focus, QComboBox:focus, QSpinBox:focus, QDateEdit:focus { border: 1px solid #ff0000; }
+QComboBox QAbstractItemView { background: #16181d; selection-background-color: #ff0000; }
+
+/* Boutons */
+QPushButton { background: #16181d; border: 1px solid #2a2d34; border-radius: 6px; padding: 7px 14px; }
+QPushButton:hover { border-color: #ff0000; }
+QPushButton:disabled { color: #666666; }
+QPushButton[primary="true"] { background: #ff0000; border: none; color: white; font-weight: bold; }
+QPushButton[primary="true"]:disabled { background: #552222; color: #999999; }
+QPushButton[nav="true"] { text-align: left; border: none; border-radius: 6px; padding: 12px; background: transparent; }
+QPushButton[nav="true"]:checked { background: #ff0000; color: white; font-weight: bold; }
+QPushButton[link="true"] { border: none; padding: 0; background: transparent; font-size: 12px; }
+QPushButton[link="true"]:hover { color: #ff4040; }
+QPushButton[menu="true"] { background: #16181d; border: 2px solid #ff0000; border-radius: 10px; padding: 14px; font-size: 16px; }
+QPushButton[menu="true"]:hover { background: #ff0000; color: white; }
+QPushButton[menu="true"]:disabled { border-color: #444444; color: #666666; background: #16181d; }
+
+/* Tableau */
+QTableWidget { background: transparent; border: none; gridline-color: transparent; }
+QTableWidget::item { border-bottom: 1px solid #2a2d34; padding: 4px; }
+QHeaderView { background: transparent; }
+QTableCornerButton::section { background: transparent; border: none; }
+QHeaderView::section { background: transparent; color: #aaaaaa; border: none; padding: 6px; text-align: left; }
+
+QScrollArea { border: none; background: transparent; }
+QDialog, QMessageBox { background: #16181d; }
