@@ -10,8 +10,9 @@
 
 // Table Oracle EMPLOYE (SQL Developer, connexion « axis »).
 // Ordre des colonnes = ordre lu par depuis().
-static const char *kCols = "ID_EMPLOYE,NOM,PRENOM,TELEPHONE,EMAIL,GRADE,POSTE,DISPONIBILITE,AGE,"
-                           "HEURES_TRAVAIL_SEMAINE,JOURS_CONGE_RESTANTS";
+static const char *kCols =
+    "ID_EMPLOYE,NOM,PRENOM,TELEPHONE,EMAIL,GRADE,DISPONIBILITE,AGE,"
+    "HEURES_TRAVAIL_SEMAINE,JOURS_CONGE_RESTANTS";
 
 // Dernière erreur (les erreurs d'un QSqlQuery ne remontent pas toujours dans QSqlDatabase)
 static QString s_erreur;
@@ -42,14 +43,26 @@ static int entier(const QVariant &v) { return qRound(v.toDouble()); }   // NUMBE
 
 static Employe depuis(const QSqlQuery &q)
 {
+
     Employe e;
-    e.id = q.value(0).toString();   e.nom = q.value(1).toString();   e.prenom = q.value(2).toString();
-    e.telephone = q.value(3).toString(); e.email = q.value(4).toString();
-    e.grade = q.value(5).toString(); e.poste = q.value(6).toString();
-    e.disponibilite = q.value(7).toString();
-    e.age = entier(q.value(8)); e.heures = entier(q.value(9));
-    e.conges = entier(q.value(10));
+
+    e.id = q.value(0).toString();
+    e.nom = q.value(1).toString();
+    e.prenom = q.value(2).toString();
+    e.telephone = q.value(3).toString();
+    e.email = q.value(4).toString();
+    e.grade = q.value(5).toString();
+
+    // POSTE n'existe pas dans la table Oracle
+    e.poste = QString();
+
+    e.disponibilite = q.value(6).toString();
+    e.age = entier(q.value(7));
+    e.heures = entier(q.value(8));
+    e.conges = entier(q.value(9));
+
     return e;
+
 }
 
 QString Employe::derniereErreur() { return s_erreur; }
@@ -100,29 +113,58 @@ QString Employe::prochainId()
 }
 
 // ------------------------------------------------------------------ CREATE
+
 bool Employe::ajouter()
 {
     if (id.isEmpty()) id = prochainId();
     if (id.isEmpty()) return false;
+
     QSqlQuery q(Connexion::oracle());
-    q.prepare(QString("INSERT INTO EMPLOYE(%1) VALUES(?,?,?,?,?,?,?,?,?,?,?)").arg(kCols));
-    q.addBindValue(id.toInt()); q.addBindValue(nom); q.addBindValue(prenom); q.addBindValue(telephone); q.addBindValue(email);
-    q.addBindValue(grade); q.addBindValue(poste); q.addBindValue(disponibilite);
-    q.addBindValue(age); q.addBindValue(heures); q.addBindValue(conges);
+
+    q.prepare(QString(
+                  "INSERT INTO EMPLOYE(%1) VALUES(?,?,?,?,?,?,?,?,?,?)"
+                  ).arg(kCols));
+
+    q.addBindValue(id.toInt());
+    q.addBindValue(nom);
+    q.addBindValue(prenom);
+    q.addBindValue(telephone);
+    q.addBindValue(email);
+    q.addBindValue(grade);
+    q.addBindValue(disponibilite);
+    q.addBindValue(age);
+    q.addBindValue(heures);
+    q.addBindValue(conges);
+
     return lancer(q);
 }
+
 
 // ------------------------------------------------------------------ UPDATE
 bool Employe::modifier() const
 {
+
     QSqlQuery q(Connexion::oracle());
-    q.prepare("UPDATE EMPLOYE SET NOM=?,PRENOM=?,TELEPHONE=?,EMAIL=?,GRADE=?,POSTE=?,DISPONIBILITE=?,"
-              "AGE=?,HEURES_TRAVAIL_SEMAINE=?,JOURS_CONGE_RESTANTS=? WHERE ID_EMPLOYE=?");
-    q.addBindValue(nom); q.addBindValue(prenom); q.addBindValue(telephone); q.addBindValue(email); q.addBindValue(grade);
-    q.addBindValue(poste); q.addBindValue(disponibilite);
-    q.addBindValue(age); q.addBindValue(heures); q.addBindValue(conges);
+
+    q.prepare("UPDATE EMPLOYE SET "
+              "NOM=?, PRENOM=?, TELEPHONE=?, EMAIL=?, "
+              "GRADE=?, DISPONIBILITE=?, AGE=?, "
+              "HEURES_TRAVAIL_SEMAINE=?, JOURS_CONGE_RESTANTS=? "
+              "WHERE ID_EMPLOYE=?");
+
+    q.addBindValue(nom);
+    q.addBindValue(prenom);
+    q.addBindValue(telephone);
+    q.addBindValue(email);
+    q.addBindValue(grade);
+    q.addBindValue(disponibilite);
+    q.addBindValue(age);
+    q.addBindValue(heures);
+    q.addBindValue(conges);
     q.addBindValue(id.toInt());
+
     return lancer(q) && q.numRowsAffected() > 0;
+
 }
 
 // ------------------------------------------------------------------ DELETE

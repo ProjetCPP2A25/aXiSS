@@ -1,91 +1,104 @@
 #include "axis.h"
 #include "ui_axis.h"
-#include "database.h"
 
-// ===== MODULE EMPLOYÉS (début) : includes à ajouter dans votre axis.cpp =====
 #include <QtWidgets>
 #include <QRegularExpressionValidator>
-#include <QFile>
-#include <QThread>
-#include <QScrollArea>
-#include "interventionpage.h"
-#include "vehiculepage.h"
-// ===== MODULE EMPLOYÉS (fin des includes) =====
+
+#include <algorithm>
+#include <functional>
+
+// ==========================================
+// Outils d'affichage du module Interventions
+// ==========================================
+namespace {
+
+// Colonnes du tableau des interventions (tableInterventions)
+enum Col { ColId, ColType, ColLieu, ColGravite, ColGps, ColReception, ColFin, ColDuree, ColEtat, ColActions,
+           NbColonnes };
+
+const char *const kFormatDate = "dd/MM/yyyy HH:mm";
+
+struct Couleurs {
+    const char *fond;
+    const char *texte;
+};
+
+QString formatDateHeure(const QDateTime &d)         // "-" si la date est invalide
+{
+    return d.isValid() ? d.toString(QLatin1String(kFormatDate)) : QStringLiteral("-");
+}
+
+QString formatDateTableau(const QDateTime &d)       // « 30/09/26 » puis « 14:32 » sur deux lignes (tableau compact)
+{
+    return d.isValid() ? d.toString(QStringLiteral("dd/MM/yy\nHH:mm")) : QStringLiteral("-");
+}
+
+Couleurs couleursGravite(const QString &gravite)
+{
+    if (gravite == Grav::Elevee)  return {"#F7D6D6", "#A61B1B"};
+    if (gravite == Grav::Moyenne) return {"#FCE8CC", "#9A5A00"};
+    return {"#DDF3E4", "#1B7A3E"};
+}
+
+Couleurs couleursEtat(const QString &etat)
+{
+    return etat == Etat::EnCours ? Couleurs{"#FCE8CC", "#9A5A00"} : Couleurs{"#DDF3E4", "#1B7A3E"};
+}
+
+QLabel *creerEtiquettePastille(const QString &texte, const Couleurs &c)
+{
+    auto *l = new QLabel(texte);
+    l->setAlignment(Qt::AlignCenter);
+    l->setStyleSheet(QStringLiteral("background-color: %1; color: %2; border: none; border-radius: 9px;"
+                                    "padding: 2px 8px; font-size: 11px;")
+                         .arg(QLatin1String(c.fond), QLatin1String(c.texte)));
+    return l;
+}
+
+QWidget *creerPastille(const QString &texte, const Couleurs &c)   // pastille alignée dans une cellule du tableau
+{
+    auto *boite = new QWidget;
+    boite->setStyleSheet(QStringLiteral("background: transparent; border: none;"));
+    auto *lay = new QHBoxLayout(boite);
+    lay->setContentsMargins(0, 0, 0, 0);
+    lay->addWidget(creerEtiquettePastille(texte, c), 0, Qt::AlignLeft | Qt::AlignVCenter);
+    return boite;
+}
+
+QToolButton *creerBoutonAction(const QString &glyphe, const QString &infobulle, const QString &survol)
+{
+    auto *b = new QToolButton;
+    b->setText(glyphe);
+    b->setToolTip(infobulle);
+    b->setCursor(Qt::PointingHandCursor);
+    b->setFixedSize(26, 26);
+    b->setStyleSheet(QStringLiteral("QToolButton { background-color: #181B1F; color: white; border: 1px solid #343A40;"
+                                    "  border-radius: 5px; font-size: 12px; }"
+                                    "QToolButton:hover { background-color: %1; border: 1px solid %1; }").arg(survol));
+    return b;
+}
+
+} // namespace
 
 // ------------------------------------------------------------ Construction
 AXIS::AXIS(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::AXIS)
 {
     ui->setupUi(this);
-
-
     setWindowTitle("A.X.I.S - RedFlame Protection");
 
-    // ===== MODULE EMPLOYÉS : initialisation (à copier dans le constructeur, après ui->setupUi(this)) =====
-    // ===== MODULE MATÉRIELS =====
-    if (QLayout *old = ui->PMateriel->layout()) {   // نفسخو الـ layout القديم إذا موجود
-        while (QLayoutItem *it = old->takeAt(0)) {
-            if (it->widget()) it->widget()->deleteLater();
-            delete it;
-        }
-        delete old;
-    }
-    materielPage_ = new MaterielPage(ui->PMateriel);
-    auto *layoutMateriel = new QVBoxLayout(ui->PMateriel);
-    layoutMateriel->setContentsMargins(0, 0, 0, 0);
-    layoutMateriel->addWidget(materielPage_);
+    // Logos (ressources.qrc : :/logo.png)
+    chargerLogo(ui->lblLogoMenuEmpl, 200);
 
-
-    QLayout *layoutIntervention = ui->PInterv->layout();
-
-    if (!layoutIntervention) {
-        layoutIntervention = new QVBoxLayout(ui->PInterv);
-    }
-
-    // Supprimer les éléments provisoires du layout
-    while (QLayoutItem *item = layoutIntervention->takeAt(0)) {
-
-        if (QWidget *widget = item->widget()) {
-            widget->hide();
-            widget->setParent(nullptr);
-            widget->deleteLater();
-        }
-
-        delete item;
-    }
-
-    // Ajouter la véritable interface Intervention
-    interventionPage_ = new InterventionPage(ui->PInterv);
-
-    layoutIntervention->setContentsMargins(0, 0, 0, 0);
-    layoutIntervention->addWidget(interventionPage_);
-
-
-    // ===== MODULE VÉHICULES : remplace la page provisoire de PVehicule =====
-    ui->lblTitreVehicule->deleteLater();
-    ui->lblInfoVehicule->deleteLater();
-    ui->btnRetourMenuVehicule->deleteLater();
-    if (QLayout *old = ui->PVehicule->layout()) {
-        while (QLayoutItem *it = old->takeAt(0)) {
-            if (it->widget()) it->widget()->deleteLater();
-            delete it;
-        }
-        delete old;
-    }
-    vehiculePage_ = new VehiculePage(ui->PVehicule);
-    auto *layoutVehicule = new QVBoxLayout(ui->PVehicule);
-    layoutVehicule->setContentsMargins(0, 0, 0, 0);
-    layoutVehicule->addWidget(vehiculePage_);
-
+    // ==========================================
+    // MODULE EMPLOYES
+    // ==========================================
     // Barre latérale du module Employés (même structure que celle des interventions), à gauche de la page CRUD
     sidebarEmpl_ = new SidebarFrame(ui->PCrudEmpl);
     auto *layoutEmpl = static_cast<QHBoxLayout *>(ui->PCrudEmpl->layout());
     layoutEmpl->insertWidget(0, sidebarEmpl_);
     layoutEmpl->setStretch(0, 0);
     layoutEmpl->setStretch(1, 1);
-
-    // Logos (ressources.qrc : :/logo.png)
-    chargerLogo(ui->lblLogoMenuEmpl, 200);
 
     // Tableau
     QTableWidget *t = ui->tblEmpl;
@@ -111,6 +124,18 @@ AXIS::AXIS(QWidget *parent)
     ui->txtTelEmpl->setMaxLength(20);
     ui->txtEmailEmpl->setMaxLength(80);
 
+    connect(ui->btnAjouterEmpl, &QPushButton::clicked, this, &AXIS::enregistrerEmploye);
+    connect(ui->btnViderEmpl, &QPushButton::clicked, this, &AXIS::viderFormulaire);
+    connect(sidebarEmpl_, &SidebarFrame::menuRequested, this, &AXIS::allerAuMenu);
+    connect(sidebarEmpl_, &SidebarFrame::logoutRequested, this, &QWidget::close);
+
+    // ==========================================
+    // AUTRES MODULES (interface dans axis.ui)
+    // ==========================================
+    initialiserModuleInterventions();
+    initialiserModuleVehicules();
+    initialiserModuleMateriels();
+
     // ----- Navigation (connect explicites, un seul .ui avec des Stacked Widget) -----
     // Menu principal : un bouton par module
     connect(ui->btnMenuEmpl, &QPushButton::clicked, this, [this] { allerAuModule(0); });
@@ -118,27 +143,9 @@ AXIS::AXIS(QWidget *parent)
     connect(ui->btnMenuVehicule, &QPushButton::clicked, this, [this] { allerAuModule(2); });
     connect(ui->btnMenuMateriel, &QPushButton::clicked, this, [this] { allerAuModule(3); });
     connect(ui->btnQuitterMenuEmpl, &QPushButton::clicked, this, &QWidget::close);
-    // Barre latérale du module Employés
-    connect(sidebarEmpl_, &SidebarFrame::menuRequested, this, &AXIS::allerAuMenu);
-    connect(sidebarEmpl_, &SidebarFrame::logoutRequested, this, &QWidget::close);
-    // Pages Interventions et Matériels : boutons « Menu principal » et « Quitter »
-    connect(interventionPage_, &InterventionPage::menuRequested, this, &AXIS::allerAuMenu);
-    connect(interventionPage_, &InterventionPage::logoutRequested, this, &QWidget::close);
-    connect(materielPage_, &MaterielPage::menuRequested, this, &AXIS::allerAuMenu);
-    connect(materielPage_, &MaterielPage::logoutRequested, this, &QWidget::close);
-    connect(vehiculePage_, &VehiculePage::menuRequested, this, &AXIS::allerAuMenu);
-    connect(vehiculePage_, &VehiculePage::logoutRequested, this, &QWidget::close);
-    // Pages des autres modules (à remplacer par les widgets de vos camarades)
-    connect(ui->btnRetourMenuInterv, &QPushButton::clicked, this, &AXIS::allerAuMenu);
-
-
-    // ----- Module Employés -----
-    connect(ui->btnAjouterEmpl, &QPushButton::clicked, this, &AXIS::enregistrerEmploye);
-    connect(ui->btnViderEmpl, &QPushButton::clicked, this, &AXIS::viderFormulaire);
 
     ui->SWAxis->setCurrentIndex(0);
     ui->stackedWidgetEmpl->setCurrentIndex(0);   // l'application s'ouvre directement sur le menu principal
-    // ===== FIN initialisation module Employés =====
 }
 
 AXIS::~AXIS()
@@ -146,34 +153,9 @@ AXIS::~AXIS()
     delete ui;
 }
 
-// ===== MODULE EMPLOYÉS : slots et fonctions (à copier à la fin de votre axis.cpp) =====
-// ------------------------------------------------------------ Connexion / navigation
-void AXIS::chargerLogo(QLabel *label, int largeur)
-{
-    const QPixmap logo(":/logo.png");
-    if (logo.isNull()) return;   // sinon on garde le texte « A.X.I.S »
-    label->setPixmap(logo.scaledToWidth(largeur, Qt::SmoothTransformation));
-    label->setAlignment(Qt::AlignCenter);
-}
-
-void AXIS::allerAuMenu()
-{
-    ui->SWAxis->setCurrentIndex(0);
-    ui->stackedWidgetEmpl->setCurrentIndex(0);
-}
-
-void AXIS::allerAuModule(int module)
-{
-    if (module == 0) {                              // module Employés : page CRUD
-        ui->SWAxis->setCurrentIndex(0);
-        ui->stackedWidgetEmpl->setCurrentIndex(1);
-        rafraichirListe();
-    } else {                                        // autres modules : pages du SWAxis
-        ui->SWAxis->setCurrentIndex(module);
-        if (module == 2) vehiculePage_->reload();   // alertes de maintenance à jour
-    }
-}
-
+// ==========================================
+// MODULE EMPLOYES
+// ==========================================
 // ------------------------------------------------------------------ Liste
 void AXIS::rafraichirListe()
 {
@@ -224,7 +206,7 @@ void AXIS::rafraichirListe()
     }
 }
 
-// ------------------------------------------------------------ Employés
+// ------------------------------------------------------------------ CRUD
 void AXIS::viderFormulaire()
 {
     editingId_.clear();
@@ -317,4 +299,436 @@ void AXIS::supprimerEmploye(const QString &id)
     rafraichirListe();
 }
 
-// ===== FIN MODULE EMPLOYÉS =====
+// ==========================================
+// MODULE INTERVENTIONS
+// ==========================================
+// Présentation du tableau / du formulaire et connexions des widgets de la page PInterv (axis.ui).
+// Recherche, tri, pagination, export, statistiques, zones à risque et carte : interface conservée, sans logique.
+void AXIS::initialiserModuleInterventions()
+{
+    // ----- Tableau -----
+    QTableWidget *t = ui->tableInterventions;
+    t->setColumnCount(NbColonnes);
+    t->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    t->setSelectionMode(QAbstractItemView::SingleSelection);
+    t->setSelectionBehavior(QAbstractItemView::SelectRows);
+    t->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    t->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    t->setFocusPolicy(Qt::NoFocus);
+    t->setWordWrap(false);
+    t->verticalHeader()->setVisible(false);
+    t->verticalHeader()->setDefaultSectionSize(46);
+
+    // Largeurs prévues pour une fenêtre de 1366 px de large (dates sur deux lignes pour gagner de la place)
+    QHeaderView *h = t->horizontalHeader();
+    h->setSectionResizeMode(QHeaderView::Fixed);
+    h->setStretchLastSection(true);
+    h->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    h->setHighlightSections(false);
+    const int largeurs[NbColonnes - 1] = {46, 80, 84, 74, 124, 78, 78, 64, 78};
+    for (int c = 0; c < NbColonnes - 1; ++c)
+        t->setColumnWidth(c, largeurs[c]);
+
+    connect(t, &QTableWidget::cellDoubleClicked, this, [this](int ligne, int) {
+        if (auto *it = ui->tableInterventions->item(ligne, ColId))
+            afficherIntervention(it->data(Qt::UserRole).toInt());
+    });
+
+    // ----- Formulaire -----
+    ui->dateReception->setDisplayFormat(QLatin1String(kFormatDate));
+    ui->dateFin->setDisplayFormat(QLatin1String(kFormatDate));
+    ui->dateReception->setCalendarPopup(true);
+    ui->dateFin->setCalendarPopup(true);
+    ui->dateFin->setStyleSheet(ui->dateFin->styleSheet()
+                               + QStringLiteral("\nQDateTimeEdit:disabled { color: #5E656C; }"));
+
+    connect(ui->btnAjouter, &QPushButton::clicked, this, &AXIS::enregistrerIntervention);
+    connect(ui->btnVider, &QPushButton::clicked, this, &AXIS::viderFormulaireIntervention);
+    connect(ui->comboEtat, &QComboBox::currentTextChanged, this, &AXIS::majEtatFormulaireIntervention);
+    connect(ui->dateReception, &QDateTimeEdit::dateTimeChanged, this, &AXIS::majDureeIntervention);
+    connect(ui->dateFin, &QDateTimeEdit::dateTimeChanged, this, &AXIS::majDureeIntervention);
+    for (QLineEdit *e : {ui->editLieu, ui->editGPS})
+        connect(e, &QLineEdit::returnPressed, this, &AXIS::enregistrerIntervention);
+
+    // ----- Navigation : barre latérale de la page -----
+    connect(ui->btnMenuPrincipal, &QPushButton::clicked, this, &AXIS::allerAuMenu);
+    connect(ui->btnDeconnexion, &QPushButton::clicked, this, &QWidget::close);
+
+    viderFormulaireIntervention();
+}
+
+// La date de fin n'est saisissable que pour une intervention terminée.
+void AXIS::majEtatFormulaireIntervention()
+{
+    ui->dateFin->setEnabled(ui->comboEtat->currentText() == Etat::Terminee);
+    majDureeIntervention();
+}
+
+// La durée n'est jamais saisie : fin - réception (terminée) ou temps écoulé depuis la réception (en cours).
+void AXIS::majDureeIntervention()
+{
+    Intervention it;
+    it.reception = ui->dateReception->dateTime();
+    if (ui->comboEtat->currentText() == Etat::Terminee)
+        it.fin = ui->dateFin->dateTime();
+    const bool coherent = !it.fin.isValid() || it.fin >= it.reception;
+    ui->editDuree->setText(coherent ? it.dureeTexte() : QString());
+}
+
+// Bouton « Vider » (mode ajout) ou « Annuler » (mode modification) : retour au formulaire d'ajout vide.
+void AXIS::viderFormulaireIntervention()
+{
+    interventionEnEdition_ = 0;
+    ui->labelAjouter->setText(QStringLiteral("Ajouter"));
+    ui->labelAjouter->setGeometry(ui->labelAjouter->x(), ui->labelAjouter->y(), 100, ui->labelAjouter->height());
+    ui->btnAjouter->setText(QStringLiteral("Ajouter"));
+    ui->btnVider->setText(QStringLiteral("Vider"));
+
+    ui->comboType->setCurrentIndex(0);
+    ui->comboGravite->setCurrentIndex(0);
+    ui->comboEtat->setCurrentIndex(0);
+    ui->editLieu->clear();
+    ui->editGPS->clear();
+    const QDateTime maintenant = QDateTime::currentDateTime();
+    ui->dateReception->setDateTime(maintenant);
+    ui->dateFin->setDateTime(maintenant);
+    majEtatFormulaireIntervention();
+}
+
+// Lit le formulaire dans une Intervention ; renvoie false (et le message dans « erreurs ») si la saisie est invalide.
+bool AXIS::lireFormulaireIntervention(Intervention &it, QString &erreurs) const
+{
+    it.type = ui->comboType->currentText();
+    it.gravite = ui->comboGravite->currentText();
+    it.etat = ui->comboEtat->currentText();
+    it.lieu = ui->editLieu->text().trimmed();
+
+    if (it.lieu.isEmpty()) {
+        erreurs = QStringLiteral("Veuillez saisir le lieu de l'intervention.");
+        return false;
+    }
+    if (!Intervention::lireGps(ui->editGPS->text(), it.lat, it.lon, &erreurs))
+        return false;
+
+    it.reception = ui->dateReception->dateTime();
+    it.fin = it.etat == Etat::Terminee ? ui->dateFin->dateTime() : QDateTime();
+
+    // Contrôle final (champs obligatoires, cohérence des dates) porté par la classe Intervention
+    return it.valider(&erreurs);
+}
+
+// Bouton Ajouter / Modifier du formulaire
+void AXIS::enregistrerIntervention()
+{
+    Intervention it;
+    QString erreur;
+    if (!lireFormulaireIntervention(it, erreur)) {
+        QMessageBox::warning(this, QStringLiteral("Données invalides"), erreur);
+        return;
+    }
+
+    if (interventionEnEdition_ == 0) {
+        if (!it.ajouter(&erreur)) {
+            QMessageBox::critical(this, QStringLiteral("Ajout impossible"), erreur);
+            return;
+        }
+    } else {
+        it.id = interventionEnEdition_;
+        if (!it.modifier(&erreur)) {
+            QMessageBox::critical(this, QStringLiteral("Modification impossible"), erreur);
+            return;
+        }
+    }
+    viderFormulaireIntervention();
+    rafraichirListeInterventions();
+}
+
+// Détails d'une intervention (avec accès direct à la modification)
+void AXIS::afficherIntervention(int id)
+{
+    Intervention it;
+    QString erreur;
+    if (!Intervention::afficher(id, it, &erreur)) {
+        QMessageBox::critical(this, QStringLiteral("Lecture impossible"), erreur);
+        rafraichirListeInterventions();
+        return;
+    }
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(QStringLiteral("Intervention %1").arg(it.idText()));
+    dlg.setStyleSheet(QStringLiteral(
+        "QDialog { background-color: #202428; }"
+        "QLabel { color: #E5E7EB; background: transparent; font-size: 13px; border: none; }"
+        "QPushButton { background-color: #181B1F; color: white; border: 1px solid #343A40;"
+        "  border-radius: 5px; padding: 7px 18px; min-width: 70px; font-size: 13px; }"
+        "QPushButton:hover { background-color: #30353A; }"
+        "QPushButton:default { background-color: #FF1717; border: none; font-weight: bold; }"
+        "QPushButton:default:hover { background-color: #E31313; }"));
+    dlg.setMinimumWidth(380);
+
+    auto *racine = new QVBoxLayout(&dlg);
+    racine->setContentsMargins(22, 20, 22, 18);
+    racine->setSpacing(14);
+
+    auto *titre = new QLabel(QStringLiteral("Intervention %1").arg(it.idText()));
+    titre->setStyleSheet(QStringLiteral("color: #FF1717; font-size: 18px; font-weight: bold;"
+                                        "background: transparent; border: none;"));
+    racine->addWidget(titre);
+
+    auto *form = new QFormLayout;
+    form->setHorizontalSpacing(18);
+    form->setVerticalSpacing(8);
+    auto ajouterLigne = [form](const QString &cle, QWidget *valeur) {
+        auto *k = new QLabel(cle);
+        k->setStyleSheet(QStringLiteral("color: #AAB0B6; background: transparent; border: none;"));
+        form->addRow(k, valeur);
+    };
+    auto texte = [](const QString &s) {
+        auto *l = new QLabel(s);
+        l->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        return l;
+    };
+    ajouterLigne(QStringLiteral("Type"), texte(it.type));
+    ajouterLigne(QStringLiteral("Lieu"), texte(it.lieu));
+    ajouterLigne(QStringLiteral("Gravité"), creerEtiquettePastille(it.gravite, couleursGravite(it.gravite)));
+    ajouterLigne(QStringLiteral("Coordonnées GPS"), texte(it.gps()));
+    ajouterLigne(QStringLiteral("Réception de l'alerte"), texte(formatDateHeure(it.reception)));
+    ajouterLigne(QStringLiteral("Fin"), texte(formatDateHeure(it.fin)));
+    ajouterLigne(QStringLiteral("Durée"), texte(it.dureeTexte()));
+    ajouterLigne(QStringLiteral("État"), creerEtiquettePastille(it.etat, couleursEtat(it.etat)));
+    racine->addLayout(form);
+
+    auto *boutons = new QHBoxLayout;
+    boutons->addStretch();
+    auto *bFermer = new QPushButton(QStringLiteral("Fermer"));
+    auto *bModifier = new QPushButton(QStringLiteral("Modifier"));
+    bModifier->setDefault(true);
+    boutons->addWidget(bFermer);
+    boutons->addWidget(bModifier);
+    racine->addLayout(boutons);
+    connect(bFermer, &QPushButton::clicked, &dlg, &QDialog::reject);
+    connect(bModifier, &QPushButton::clicked, &dlg, &QDialog::accept);
+
+    if (dlg.exec() == QDialog::Accepted)
+        modifierIntervention(id);
+}
+
+// Charge l'intervention dans le formulaire (mode modification)
+void AXIS::modifierIntervention(int id)
+{
+    Intervention it;
+    QString erreur;
+    if (!Intervention::afficher(id, it, &erreur)) {
+        QMessageBox::critical(this, QStringLiteral("Modification impossible"), erreur);
+        rafraichirListeInterventions();
+        return;
+    }
+
+    interventionEnEdition_ = it.id;
+    ui->comboType->setCurrentIndex(std::max(0, ui->comboType->findText(it.type)));
+    ui->comboGravite->setCurrentIndex(std::max(0, ui->comboGravite->findText(it.gravite)));
+    ui->comboEtat->setCurrentIndex(std::max(0, ui->comboEtat->findText(it.etat)));
+    ui->editLieu->setText(it.lieu);
+    ui->editGPS->setText(it.gps());
+    ui->dateReception->setDateTime(it.reception);
+    ui->dateFin->setDateTime(it.fin.isValid() ? it.fin : QDateTime::currentDateTime());
+    majEtatFormulaireIntervention();
+
+    ui->labelAjouter->setGeometry(ui->labelAjouter->x(), ui->labelAjouter->y(), 218, ui->labelAjouter->height());
+    ui->labelAjouter->setText(QStringLiteral("Modifier %1").arg(it.idText()));
+    ui->btnAjouter->setText(QStringLiteral("Modifier"));
+    ui->btnVider->setText(QStringLiteral("Annuler"));
+    ui->scrollArea->verticalScrollBar()->setValue(0);
+    ui->editLieu->setFocus();
+}
+
+// Suppression (avec confirmation)
+void AXIS::supprimerIntervention(int id)
+{
+    Intervention it;
+    QString erreur;
+    if (!Intervention::afficher(id, it, &erreur)) {           // sélection d'une intervention existante
+        QMessageBox::critical(this, QStringLiteral("Suppression impossible"), erreur);
+        rafraichirListeInterventions();
+        return;
+    }
+
+    // Confirmation obligatoire avant toute suppression
+    QMessageBox boite(QMessageBox::Warning, QStringLiteral("Supprimer l'intervention"),
+                      QStringLiteral("Supprimer l'intervention %1 (%2 – %3) ?\nCette action est définitive.")
+                          .arg(it.idText(), it.type, it.lieu),
+                      QMessageBox::NoButton, this);
+    QPushButton *oui = boite.addButton(QStringLiteral("Supprimer"), QMessageBox::AcceptRole);
+    QPushButton *non = boite.addButton(QStringLiteral("Annuler"), QMessageBox::RejectRole);
+    boite.setDefaultButton(non);
+    boite.exec();
+    if (boite.clickedButton() != oui)
+        return;
+
+    if (!Intervention::supprimer(id, &erreur)) {              // inclut les erreurs de clé étrangère
+        QMessageBox::critical(this, QStringLiteral("Suppression impossible"), erreur);
+        return;
+    }
+    if (interventionEnEdition_ == id)
+        viderFormulaireIntervention();
+    rafraichirListeInterventions();
+}
+
+// ------------------------------------------------------------ Liste
+void AXIS::rafraichirListeInterventions()
+{
+    QString erreur;
+    const QVector<Intervention> liste = Intervention::lister(&erreur);
+    QTableWidget *t = ui->tableInterventions;
+    t->clearContents();
+    t->setRowCount(0);
+    if (!erreur.isEmpty()) {
+        ui->labelPagination->setText(QStringLiteral("Lecture impossible"));
+        QMessageBox::critical(this, QStringLiteral("Erreur de la base de données"), erreur);
+        return;
+    }
+
+    // Liste vide : message explicite à la place de la pagination
+    ui->labelPagination->setText(liste.isEmpty()
+                                     ? QStringLiteral("Aucune intervention enregistrée")
+                                     : QStringLiteral("%1 intervention%2").arg(liste.size()).arg(liste.size() > 1 ? "s" : ""));
+
+    auto creerItem = [](const QString &texte, const QString &infobulle) {
+        auto *item = new QTableWidgetItem(texte);
+        item->setFlags(Qt::ItemIsSelectable | Qt::ItemIsEnabled);
+        item->setToolTip(infobulle);
+        return item;
+    };
+
+    t->setRowCount(liste.size());
+    for (int r = 0; r < liste.size(); ++r) {
+        const Intervention &i = liste[r];
+        t->setRowHeight(r, 46);
+
+        auto *idItem = creerItem(i.idText(), i.idText());
+        idItem->setData(Qt::UserRole, i.id);                    // identifiant réel, utilisé par les actions
+        t->setItem(r, ColId, idItem);
+        t->setItem(r, ColType, creerItem(i.type, i.type));
+        t->setItem(r, ColLieu, creerItem(i.lieu, i.lieu));
+        t->setItem(r, ColGravite, creerItem(QString(), i.gravite));
+        t->setItem(r, ColGps, creerItem(i.gps(), i.gps()));
+        t->setItem(r, ColReception, creerItem(formatDateTableau(i.reception), formatDateHeure(i.reception)));
+        t->setItem(r, ColFin, creerItem(formatDateTableau(i.fin), formatDateHeure(i.fin)));
+        t->setItem(r, ColDuree, creerItem(i.dureeTexte(), i.dureeTexte()));
+        t->setItem(r, ColEtat, creerItem(QString(), i.etat));
+        t->setItem(r, ColActions, creerItem(QString(), QString()));
+
+        t->setCellWidget(r, ColGravite, creerPastille(i.gravite, couleursGravite(i.gravite)));
+        t->setCellWidget(r, ColEtat, creerPastille(i.etat, couleursEtat(i.etat)));
+
+        // Actions : Afficher / Modifier / Supprimer
+        auto *actions = new QWidget;
+        actions->setStyleSheet(QStringLiteral("background: transparent; border: none;"));
+        auto *lay = new QHBoxLayout(actions);
+        lay->setContentsMargins(0, 0, 0, 0);
+        lay->setSpacing(4);
+        auto *bAfficher = creerBoutonAction(QStringLiteral("👁"), QStringLiteral("Afficher"), QStringLiteral("#30353A"));
+        auto *bModifier = creerBoutonAction(QStringLiteral("✎"), QStringLiteral("Modifier"), QStringLiteral("#30353A"));
+        auto *bSupprimer = creerBoutonAction(QStringLiteral("🗑"), QStringLiteral("Supprimer"), QStringLiteral("#A61B1B"));
+        lay->addWidget(bAfficher);
+        lay->addWidget(bModifier);
+        lay->addWidget(bSupprimer);
+        lay->addStretch();
+        const int id = i.id;
+        connect(bAfficher, &QToolButton::clicked, this, [this, id] { afficherIntervention(id); });
+        connect(bModifier, &QToolButton::clicked, this, [this, id] { modifierIntervention(id); });
+        connect(bSupprimer, &QToolButton::clicked, this, [this, id] { supprimerIntervention(id); });
+        t->setCellWidget(r, ColActions, actions);
+    }
+}
+
+// ==========================================
+// MODULE VEHICULES
+// ==========================================
+// Interface : page PVehicule de axis.ui (barre latérale + QScrollArea). AFFICHAGE SEUL : les boutons du formulaire
+// sont présents mais non fonctionnels ; seule la navigation (« Menu principal », « Quitter ») est active.
+void AXIS::initialiserModuleVehicules()
+{
+    // Barre latérale à gauche, page défilante à droite
+    sidebarVeh_ = new SidebarFrame(ui->PVehicule);
+    auto *lay = static_cast<QHBoxLayout *>(ui->PVehicule->layout());
+    lay->insertWidget(0, sidebarVeh_);
+    lay->setStretch(0, 0);
+    lay->setStretch(1, 1);
+    connect(sidebarVeh_, &SidebarFrame::menuRequested, this, &AXIS::allerAuMenu);
+    connect(sidebarVeh_, &SidebarFrame::logoutRequested, this, &QWidget::close);
+
+    // Présentation du tableau (aucune donnée : affichage seul)
+    QHeaderView *h = ui->tableVeh->horizontalHeader();
+    h->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    h->setSectionResizeMode(QHeaderView::ResizeToContents);
+    h->setFixedHeight(44);
+
+    ui->bannerVeh->hide();   // le bandeau « maintenance requise » n'a pas de sens sans données
+}
+
+// ==========================================
+// MODULE MATERIELS
+// ==========================================
+// Interface : page PMateriel de axis.ui (barre latérale + QScrollArea). AFFICHAGE SEUL : les boutons du formulaire
+// sont présents mais non fonctionnels ; seule la navigation (« Menu principal », « Quitter ») est active.
+void AXIS::initialiserModuleMateriels()
+{
+    // Barre latérale à gauche, page défilante à droite
+    sidebarMat_ = new SidebarFrame(ui->PMateriel);
+    auto *lay = static_cast<QHBoxLayout *>(ui->PMateriel->layout());
+    lay->insertWidget(0, sidebarMat_);
+    lay->setStretch(0, 0);
+    lay->setStretch(1, 1);
+    connect(sidebarMat_, &SidebarFrame::menuRequested, this, &AXIS::allerAuMenu);
+    connect(sidebarMat_, &SidebarFrame::logoutRequested, this, &QWidget::close);
+
+    // Présentation des tableaux (aucune donnée : affichage seul)
+    QHeaderView *h = ui->tableMat->horizontalHeader();
+    h->setFixedHeight(44);
+    h->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    h->setSectionResizeMode(QHeaderView::Fixed);
+    h->setSectionResizeMode(2, QHeaderView::Stretch);
+    const int largeurs[] = {48, 80, 0, 92, 66, 46, 58, 98, 82, 76, 112};
+    for (int c = 0; c < 11; ++c)
+        if (largeurs[c]) ui->tableMat->setColumnWidth(c, largeurs[c]);
+
+    QHeaderView *hm = ui->tableMv->horizontalHeader();
+    hm->setFixedHeight(32);
+    hm->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    hm->setSectionResizeMode(QHeaderView::Stretch);
+
+    ui->bannerMat->hide();   // le bandeau « stock critique » n'a pas de sens sans données
+}
+
+// ==========================================
+// SLOTS GENERAUX
+// ==========================================
+// Navigation entre les modules.
+// ------------------------------------------------------------ Connexion / navigation
+void AXIS::chargerLogo(QLabel *label, int largeur)
+{
+    const QPixmap logo(":/logo.png");
+    if (logo.isNull()) return;   // sinon on garde le texte « A.X.I.S »
+    label->setPixmap(logo.scaledToWidth(largeur, Qt::SmoothTransformation));
+    label->setAlignment(Qt::AlignCenter);
+}
+
+void AXIS::allerAuMenu()
+{
+    ui->SWAxis->setCurrentIndex(0);
+    ui->stackedWidgetEmpl->setCurrentIndex(0);
+}
+
+void AXIS::allerAuModule(int module)
+{
+    if (module == 0) {                              // module Employés : page CRUD
+        ui->SWAxis->setCurrentIndex(0);
+        ui->stackedWidgetEmpl->setCurrentIndex(1);
+        rafraichirListe();
+    } else {                                        // autres modules : pages du SWAxis
+        ui->SWAxis->setCurrentIndex(module);
+        if (module == 1)                            // module Interventions : tableau à jour à l'ouverture
+            rafraichirListeInterventions();
+    }
+}

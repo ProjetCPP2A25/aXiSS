@@ -2,13 +2,11 @@
 #include <QString>
 #include <QSqlDatabase>
 
-// Gère les connexions de l'application :
-//  - Oracle (connexion nommée "oracle", via ODBC) : utilisée par le module Employés (classe Employe) ;
-//  - SQLite (connexion par défaut) : utilisée par les autres modules (interventions, véhicules, matériels),
-//    en attendant qu'ils soient eux aussi reliés à Oracle.
+// Connexion Oracle commune à toute l'application (connexion nommée "oracle", via ODBC, ouverte une seule fois par main()).
+// Utilisée par les classes métier Employe et Intervention : toujours passer par Connexion::oracle().
 class Connexion
 {
 public:
-    static bool ouvrir(QString &erreur);     // ouvre Oracle puis SQLite
+    static bool ouvrir(QString &erreur);     // ouvre Oracle
     static QSqlDatabase oracle();            // connexion Oracle, ouverte une seule fois pour toute l'application
 };

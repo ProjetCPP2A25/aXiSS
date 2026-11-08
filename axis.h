@@ -2,18 +2,15 @@
 #include <QMainWindow>
 #include <QDateTime>
 #include "employe.h"
-#include "materielpage.h"
+#include "intervention.h"
 QT_BEGIN_NAMESPACE
 namespace Ui { class AXIS; }
 QT_END_NAMESPACE
 
-class InterventionPage;
-class VehiculePage;
 class SidebarFrame;
-class QThread;
 class QLabel;
 
-// Fenêtre principale : gestion de la caserne (G = Gestion).
+// Fenêtre principale unique : gestion de la caserne (G = Gestion). Une seule interface (axis.ui) pour les cinq modules.
 class AXIS : public QMainWindow
 {
     Q_OBJECT
@@ -22,12 +19,10 @@ public:
     ~AXIS() override;
 
 private:
-    // ===== MODULE EMPLOYÉS : déclarations (à copier dans la partie private de votre axis.h) =====
-    // Navigation (stackedWidgetEmpl : 0 menu principal, 1 page CRUD des employés)
-    void allerAuModule(int module);          // module : 0 Employés, 1 Interventions, 2 Véhicules, 3 Matériels
-    void allerAuMenu();
-    void chargerLogo(QLabel *label, int largeur);
-
+    // ==========================================
+    // MODULE EMPLOYES
+    // ==========================================
+    // Code existant de ma coéquipière : préserver.
     void rafraichirListe();
     void viderFormulaire();
     void enregistrerEmploye();
@@ -35,11 +30,54 @@ private:
     void afficherEmploye(const QString &id);
     void supprimerEmploye(const QString &id);
 
-    Ui::AXIS *ui;   // existe déjà dans votre axis.h : ne pas le copier une 2e fois
     QString editingId_;
-    MaterielPage *materielPage_ = nullptr;
-    InterventionPage *interventionPage_;
-    VehiculePage *vehiculePage_ = nullptr;
     SidebarFrame *sidebarEmpl_ = nullptr;
-    // ===== FIN MODULE EMPLOYÉS =====
+
+    // ==========================================
+    // MODULE INTERVENTIONS
+    // ==========================================
+    // Gestion de l'interface et des CRUD Intervention (la classe métier est dans intervention.h / intervention.cpp).
+    void initialiserModuleInterventions();          // présentation du tableau/formulaire + connexions des widgets
+
+    // Opérations CRUD
+    void enregistrerIntervention();                 // bouton Ajouter / Modifier du formulaire : ajouter() ou modifier()
+    void afficherIntervention(int id);              // détails d'une intervention
+    void modifierIntervention(int id);              // charge l'intervention dans le formulaire (mode modification)
+    void supprimerIntervention(int id);             // avec confirmation
+
+    // Gestion du formulaire et du tableau
+    void viderFormulaireIntervention();             // bouton Vider / Annuler
+    void rafraichirListeInterventions();
+    void majEtatFormulaireIntervention();           // date de fin saisissable seulement si « Terminée »
+    void majDureeIntervention();                    // durée calculée (jamais saisie)
+    bool lireFormulaireIntervention(Intervention &it, QString &erreurs) const;
+
+    int interventionEnEdition_ = 0;                 // 0 : mode ajout ; sinon ID_INTERVENTION en cours de modification
+
+    // ==========================================
+    // MODULE VEHICULES
+    // ==========================================
+    // Page PVehicule de axis.ui (affichage seul : les boutons ne sont reliés à aucune action, sauf la navigation).
+    void initialiserModuleVehicules();              // barre latérale, présentation du tableau, navigation
+
+    SidebarFrame *sidebarVeh_ = nullptr;
+
+    // ==========================================
+    // MODULE MATERIELS
+    // ==========================================
+    // Page PMateriel de axis.ui (affichage seul : les boutons ne sont reliés à aucune action, sauf la navigation).
+    void initialiserModuleMateriels();              // barre latérale, présentation des tableaux, navigation
+
+    SidebarFrame *sidebarMat_ = nullptr;
+
+    // ==========================================
+    // SLOTS GENERAUX
+    // ==========================================
+    // Navigation entre les modules (stackedWidgetEmpl : 0 menu principal, 1 page CRUD des employés ;
+    // SWAxis : 0 Employés/menu, 1 Interventions, 2 Véhicules, 3 Matériels).
+    void allerAuModule(int module);          // module : 0 Employés, 1 Interventions, 2 Véhicules, 3 Matériels
+    void allerAuMenu();
+    void chargerLogo(QLabel *label, int largeur);
+
+    Ui::AXIS *ui;
 };

@@ -3,13 +3,11 @@
 #include <QMessageBox>
 #include "axis.h"
 #include "connexion.h"
-#include "database.h"
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     QCoreApplication::setOrganizationName("RedFlame");
-    // Nom interne conservé : il détermine l'emplacement de la base SQLite et des réglages email déjà enregistrés
     QCoreApplication::setApplicationName("Caserne");
 
     // Feuille de style : style.qss (inclus dans ressources.qrc)
@@ -22,12 +20,6 @@ int main(int argc, char *argv[])
         QMessageBox::critical(nullptr, "Base de données", erreur);
         return 1;
     }
-    QString dbError;
-    if (!Database::open(&dbError)) {
-        QMessageBox::critical(nullptr, "Base de données", dbError);
-        return 1;
-    }
-
     AXIS w;
     w.resize(1500, 850);
     w.show();

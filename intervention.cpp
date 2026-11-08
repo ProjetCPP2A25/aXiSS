@@ -1,129 +1,124 @@
 #include "intervention.h"
-#include "helpers.h"
+#include "connexion.h"
 
-#include <QHash>
 #include <QRegularExpression>
+#include <QSqlDatabase>
+#include <QSqlError>
+#include <QSqlQuery>
+#include <QVariant>
 
 #include <algorithm>
 
 namespace {
 
-// Stockage en mémoire (aucune base de données) : les données vivent le temps de l'exécution.
-QVector<Intervention> &stock()
+// "45 min", "1 h 15", "2 h"
+QString formatDuration(qint64 minutes)
 {
-    static QVector<Intervention> lignes = [] {
-        auto make = [](int id, const char *type, const char *lieu, const QString &grav, const char *rec,
-                       const char *fin, double lat, double lon) {
-            Intervention i;
-            i.id = id;
-            i.type = QString::fromUtf8(type);
-            i.lieu = QString::fromUtf8(lieu);
-            i.gravite = grav;
-            i.reception = QDateTime::fromString(QString::fromLatin1(rec), QStringLiteral("yyyy-MM-dd HH:mm"));
-            if (fin) {
-                i.fin = QDateTime::fromString(QString::fromLatin1(fin), QStringLiteral("yyyy-MM-dd HH:mm"));
-                i.etat = Etat::Terminee;
-            } else {
-                i.etat = Etat::EnCours;
-            }
-            i.lat = lat;
-            i.lon = lon;
-            return i;
-        };
-        QVector<Intervention> v;
-        v << make(1, "Incendie",   "Ben Arous",    Grav::Elevee,  "2026-09-30 14:32", nullptr,            36.7534, 10.2231)
-          << make(2, "Accident",   "Tunis centre", Grav::Moyenne, "2026-09-30 11:05", "2026-09-30 11:35", 36.8065, 10.1815)
-          << make(3, "Inondation", "Ariana",       Grav::Faible,  "2026-09-30 09:40", "2026-09-30 12:50", 36.8625, 10.1956)
-          << make(4, "Incendie",   "Ben Arous",    Grav::Elevee,  "2026-09-12 18:20", "2026-09-12 19:55", 36.7480, 10.2290)
-          << make(5, "Accident",   "Ben Arous",    Grav::Moyenne, "2026-08-27 07:45", "2026-08-27 08:25", 36.7560, 10.2180)
-          << make(6, "Inondation", "Ariana",       Grav::Moyenne, "2026-09-18 06:30", "2026-09-18 10:50", 36.8601, 10.1932)
-          << make(7, "Accident",   "Carthage",     Grav::Faible,  "2026-09-22 20:05", "2026-09-22 20:40", 36.8528, 10.3233)
-          << make(8, "Incendie",   "Tunis centre", Grav::Elevee,  "2026-10-01 16:40", nullptr,            36.8100, 10.1850);
-        return v;
-    }();
-    return lignes;
+    if (minutes < 60)
+        return QStringLiteral("%1 min").arg(minutes);
+    const qint64 h = minutes / 60;
+    const qint64 m = minutes % 60;
+    return m == 0 ? QStringLiteral("%1 h").arg(h)
+                  : QStringLiteral("%1 h %2").arg(h).arg(m, 2, 10, QChar('0'));
 }
 
-int prochainId()
+// Toutes les requêtes SQL du module Interventions sont écrites dans cette classe. Elles sont toutes préparées
+// (prepare + bindValue) : les valeurs saisies ne sont jamais concaténées dans le texte SQL (pas d'injection SQL).
+// Noms de colonnes = schéma Oracle de référence (TYPE, LIEU, COORDONNEES_GPS, DATE_RECEPTION_APPEL, ...).
+const QString kColonnes = QStringLiteral(
+    "ID_INTERVENTION, TYPE, LIEU, GRAVITE, "
+    "DATE_RECEPTION_APPEL, HEURE_RECEPTION_APPEL, "
+    "DATE_FIN_INTERVENTION, HEURE_FIN_INTERVENTION, "
+    "ETAT, DUREE, COORDONNEES_GPS, ID_GARDE"
+    );
+
+// Index des colonnes dans kColonnes
+enum Col { cId, cType, cLieu, cGravite, cDateRec, cHeureRec, cDateFin, cHeureFin, cEtat, cDuree, cGps, cGarde };
+
+// Connexion Oracle commune du projet (la même que celle du module Employés), ouverte au démarrage par main().
+QSqlDatabase base()
 {
-    int maxId = 0;
-    for (const Intervention &i : std::as_const(stock()))
-        maxId = std::max(maxId, i.id);
-    return maxId + 1;
+    return Connexion::oracle();
 }
 
-// Poids de la gravité : 1 = faible, 2 = moyenne, 3 = élevée
-int graviteVersCode(const QString &g)
+bool baseOuverte(QString *erreur)
 {
-    if (g == Grav::Elevee)  return 3;
-    if (g == Grav::Moyenne) return 2;
-    return 1;
-}
-
-// Recherche par coordonnées GPS : "36.8065" (latitude ou longitude) ou "36.8065, 10.18" (les deux).
-bool correspond(const Intervention &i, const QString &gps)
-{
-    const QString texte = gps.trimmed();
-    if (texte.isEmpty())
+    if (base().isValid() && base().isOpen())
         return true;
-
-    static const QRegularExpression caracteresValides(QStringLiteral("^[-0-9.,;\\s]+$"));
-    if (!caracteresValides.match(texte).hasMatch())
-        return false;
-
-    QStringList parties;
-    for (const QString &p : texte.split(QRegularExpression(QStringLiteral("[,;]")), Qt::SkipEmptyParts)) {
-        const QString nettoyee = QString(p).remove(QRegularExpression(QStringLiteral("\\s")));
-        if (!nettoyee.isEmpty())
-            parties << nettoyee;
-    }
-    if (parties.isEmpty())
-        return false;
-
-    const QString latitude = QString::number(i.lat, 'f', 4);
-    const QString longitude = QString::number(i.lon, 'f', 4);
-    if (parties.size() >= 2)
-        return latitude.contains(parties[0]) && longitude.contains(parties[1]);
-    return latitude.contains(parties[0]) || longitude.contains(parties[0]);
+    if (erreur)
+        *erreur = QStringLiteral("La connexion à la base de données Oracle n'est pas établie.");
+    return false;
 }
 
-QVector<Intervention> filtrer(const Intervention::Filtre &filtre)
+void signaler(QString *erreur, const QString &contexte, const QSqlQuery &query)
 {
-    QVector<Intervention> res;
-    for (const Intervention &i : std::as_const(stock()))
-        if (correspond(i, filtre.gps))
-            res.push_back(i);
+    if (!erreur)
+        return;
+    const QString detail = query.lastError().text();
+    *erreur = contexte + QStringLiteral("\n") + detail;
 
-    using T = Intervention::Tri;
-    switch (filtre.tri) {
-    case T::GraviteDecroissante:
-        std::stable_sort(res.begin(), res.end(), [](const Intervention &a, const Intervention &b) {
-            const int ga = graviteVersCode(a.gravite), gb = graviteVersCode(b.gravite);
-            if (ga != gb) return ga > gb;
-            if (a.reception != b.reception) return a.reception > b.reception;
-            return a.id < b.id;
-        });
-        break;
-    case T::GraviteCroissante:
-        std::stable_sort(res.begin(), res.end(), [](const Intervention &a, const Intervention &b) {
-            const int ga = graviteVersCode(a.gravite), gb = graviteVersCode(b.gravite);
-            if (ga != gb) return ga < gb;
-            if (a.reception != b.reception) return a.reception > b.reception;
-            return a.id < b.id;
-        });
-        break;
-    case T::PlusRecentes:
-        std::stable_sort(res.begin(), res.end(), [](const Intervention &a, const Intervention &b) {
-            if (a.reception != b.reception) return a.reception > b.reception;
-            return a.id > b.id;
-        });
-        break;
-    case T::Aucun:
-        std::stable_sort(res.begin(), res.end(),
-                         [](const Intervention &a, const Intervention &b) { return a.id < b.id; });
-        break;
+    // Messages explicites pour les erreurs de clés étrangères / contraintes Oracle les plus courantes
+    if (detail.contains(QLatin1String("ORA-02292")))
+        *erreur = contexte + QStringLiteral("\nCette intervention est encore référencée par d'autres enregistrements "
+                                            "(contrainte de clé étrangère) : elle ne peut pas être supprimée.\n") + detail;
+    else if (detail.contains(QLatin1String("ORA-02291")))
+        *erreur = contexte + QStringLiteral("\nLa garde (ID_GARDE) n'existe pas dans la table GARDE "
+                                            "(contrainte de clé étrangère).\n") + detail;
+    else if (detail.contains(QLatin1String("ORA-00001")))
+        *erreur = contexte + QStringLiteral("\nUn enregistrement avec le même identifiant existe déjà.\n") + detail;
+    else if (detail.contains(QLatin1String("ORA-12899")))
+        *erreur = contexte + QStringLiteral("\nUne valeur saisie est trop longue pour la colonne Oracle.\n") + detail;
+}
+
+// Valeur NULL typée (texte) pour les colonnes optionnelles : date/heure de fin d'une intervention en cours
+QVariant texteOuNull(const QString &s, bool present)
+{
+    return present ? QVariant(s) : QVariant(QMetaType::fromType<QString>());
+}
+
+// Ligne de résultat (colonnes dans l'ordre de kColonnes) -> objet Intervention
+Intervention depuisLigne(const QSqlQuery &q)
+{
+    Intervention i;
+    i.id = q.value(cId).toInt();
+    i.type = q.value(cType).toString();
+    i.lieu = q.value(cLieu).toString();
+    i.gravite = q.value(cGravite).toString();
+    i.etat = q.value(cEtat).toString();
+    i.idGarde = q.value(cGarde).toInt();
+
+    // Date et heure de réception (colonnes distinctes : DATE + "HH:mm")
+    i.reception = QDateTime(q.value(cDateRec).toDate(),
+                            QTime::fromString(q.value(cHeureRec).toString(), QStringLiteral("HH:mm")));
+
+    // Date et heure de fin (absentes tant que l'intervention est en cours)
+    if (!q.value(cDateFin).isNull() && !q.value(cHeureFin).isNull()) {
+        i.fin = QDateTime(q.value(cDateFin).toDate(),
+                          QTime::fromString(q.value(cHeureFin).toString(), QStringLiteral("HH:mm")));
     }
-    return res;
+
+    // Coordonnées GPS : texte "36.8532, 10.5563"
+    Intervention::lireGps(q.value(cGps).toString(), i.lat, i.lon);
+    return i;
+}
+
+// Lit toutes les interventions de la table (requête préparée, sans paramètre)
+QVector<Intervention> lireToutes(QString *erreur)
+{
+    QVector<Intervention> lignes;
+    if (!baseOuverte(erreur))
+        return lignes;
+
+    QSqlQuery query(base());
+    query.setForwardOnly(true);
+    query.prepare(QStringLiteral("SELECT ") + kColonnes + QStringLiteral(" FROM INTERVENTION ORDER BY ID_INTERVENTION"));
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Lecture des interventions impossible."), query);
+        return {};
+    }
+    while (query.next())
+        lignes.push_back(depuisLigne(query));
+    return lignes;
 }
 
 } // namespace
@@ -150,7 +145,7 @@ qint64 Intervention::dureeMinutes() const
 
 QString Intervention::dureeTexte() const
 {
-    return Helpers::formatDuration(dureeMinutes());
+    return formatDuration(dureeMinutes());
 }
 
 int Intervention::graviteRang() const
@@ -158,6 +153,33 @@ int Intervention::graviteRang() const
     if (gravite == Grav::Elevee)  return 0;
     if (gravite == Grav::Moyenne) return 1;
     return 2;
+}
+
+bool Intervention::lireGps(const QString &texte, double &lat, double &lon, QString *erreur)
+{
+    auto refuser = [erreur](const QString &message) {
+        if (erreur)
+            *erreur = message;
+        return false;
+    };
+
+    static const QRegularExpression re(
+        QStringLiteral("^\\s*(-?\\d+(?:\\.\\d+)?)\\s*[,;]\\s*(-?\\d+(?:\\.\\d+)?)\\s*$"));
+    const QRegularExpressionMatch m = re.match(texte);
+    if (!m.hasMatch())
+        return refuser(QStringLiteral("Coordonnées GPS invalides.\n"
+                                      "Format attendu : latitude, longitude (ex. 36.8065, 10.1815)."));
+
+    const double la = m.captured(1).toDouble();
+    const double lo = m.captured(2).toDouble();
+    if (la < -90.0 || la > 90.0)
+        return refuser(QStringLiteral("La latitude doit être comprise entre -90 et 90."));
+    if (lo < -180.0 || lo > 180.0)
+        return refuser(QStringLiteral("La longitude doit être comprise entre -180 et 180."));
+
+    lat = la;
+    lon = lo;
+    return true;
 }
 
 bool Intervention::valider(QString *erreur) const
@@ -170,41 +192,153 @@ bool Intervention::valider(QString *erreur) const
 
     if (type.trimmed().isEmpty())
         return refuser(QStringLiteral("Veuillez choisir le type de l'intervention."));
+    if (type.size() > 50)
+        return refuser(QStringLiteral("Le type ne doit pas dépasser 50 caractères."));
     if (lieu.trimmed().isEmpty())
         return refuser(QStringLiteral("Veuillez saisir le lieu de l'intervention."));
     if (lieu.size() > 100)
         return refuser(QStringLiteral("Le lieu ne doit pas dépasser 100 caractères."));
-    if (lat < -90.0 || lat > 90.0 || lon < -180.0 || lon > 180.0)
-        return refuser(QStringLiteral("Coordonnées GPS hors limites."));
+    if (gravite.trimmed().isEmpty())
+        return refuser(QStringLiteral("Veuillez choisir la gravité de l'intervention."));
+    if (lat < -90.0 || lat > 90.0)
+        return refuser(QStringLiteral("La latitude doit être comprise entre -90 et 90."));
+    if (lon < -180.0 || lon > 180.0)
+        return refuser(QStringLiteral("La longitude doit être comprise entre -180 et 180."));
     if (!reception.isValid())
         return refuser(QStringLiteral("La date de réception de l'alerte est obligatoire."));
+    if (etat != Etat::EnCours && etat != Etat::Terminee)
+        return refuser(QStringLiteral("L'état doit être « En cours » ou « Terminée »."));
     if (etat == Etat::Terminee) {
         if (!fin.isValid())
             return refuser(QStringLiteral("La date de fin est obligatoire pour une intervention terminée."));
         if (fin < reception)
-            return refuser(QStringLiteral("La date de fin doit être postérieure à la réception de l'alerte."));
+            return refuser(QStringLiteral("La date de fin doit être postérieure ou égale à la réception de l'alerte."));
+    }
+    if (idGarde < 0)
+        return refuser(QStringLiteral("L'identifiant de garde est invalide."));
+    return true;
+}
+
+// ---------------------------------------------------------------------------------------------
+// Garde (clé étrangère ID_GARDE)
+// ---------------------------------------------------------------------------------------------
+
+bool Intervention::gardeExiste(int idGarde, QString *erreur)
+{
+    if (!baseOuverte(erreur))
+        return false;
+
+    QSqlQuery query(base());
+    query.prepare(QStringLiteral("SELECT COUNT(*) FROM GARDE WHERE ID_GARDE = :id"));
+    query.bindValue(QStringLiteral(":id"), idGarde);
+    if (!query.exec() || !query.next()) {
+        signaler(erreur, QStringLiteral("Vérification de la garde impossible."), query);
+        return false;
+    }
+    if (query.value(0).toInt() == 0) {
+        if (erreur)
+            *erreur = QStringLiteral("La garde n° %1 n'existe pas.").arg(idGarde);
+        return false;
     }
     return true;
 }
 
 // ---------------------------------------------------------------------------------------------
-// CRUD (en mémoire)
+// CRUD (table INTERVENTION, requêtes préparées)
 // ---------------------------------------------------------------------------------------------
 
-bool Intervention::ajouter(QString *)
+bool Intervention::ajouter(QString *erreur)
 {
-    id = prochainId();
-    stock().push_back(*this);
+    // Contrôle de saisie dans le code C++ (les contraintes de la table le répètent côté base)
+    if (!valider(erreur) || !baseOuverte(erreur))
+        return false;
+
+    // Garde : celle indiquée, sinon (provisoire) la première garde existante
+    int garde = idGarde;
+    if (garde == 0) {
+        QSqlQuery premiere(base());
+        premiere.prepare(QStringLiteral("SELECT MIN(ID_GARDE) FROM GARDE"));
+        if (!premiere.exec() || !premiere.next()) {
+            signaler(erreur, QStringLiteral("Ajout impossible : lecture de la table GARDE impossible."), premiere);
+            return false;
+        }
+        if (premiere.value(0).isNull()) {
+            if (erreur)
+                *erreur = QStringLiteral("Ajout impossible : aucune garde n'existe dans la table GARDE.\n"
+                                         "Une intervention doit être rattachée à une garde existante.");
+            return false;
+        }
+        garde = premiere.value(0).toInt();
+    }
+    if (!gardeExiste(garde, erreur))
+        return false;
+
+    // Prochain identifiant
+    QSqlQuery suivant(base());
+    suivant.prepare(QStringLiteral("SELECT COALESCE(MAX(ID_INTERVENTION), 0) + 1 FROM INTERVENTION"));
+    if (!suivant.exec() || !suivant.next()) {
+        signaler(erreur, QStringLiteral("Ajout impossible : identifiant non attribué."), suivant);
+        return false;
+    }
+    const int nouvelId = suivant.value(0).toInt();
+
+    const bool termine = (etat == Etat::Terminee && fin.isValid());
+
+    QSqlQuery query(base());
+    if (!query.prepare(QStringLiteral(
+            "INSERT INTO INTERVENTION ("
+            "ID_INTERVENTION, TYPE, LIEU, GRAVITE, "
+            "DATE_RECEPTION_APPEL, HEURE_RECEPTION_APPEL, "
+            "DATE_FIN_INTERVENTION, HEURE_FIN_INTERVENTION, "
+            "ETAT, DUREE, COORDONNEES_GPS, ID_GARDE"
+            ") VALUES ("
+            ":id, :type, :lieu, :gravite, "
+            "TO_DATE(:dateReception, 'YYYY-MM-DD'), :heureReception, "
+            "TO_DATE(:dateFin, 'YYYY-MM-DD'), :heureFin, "
+            ":etat, :duree, :gps, :garde)"))) {
+        signaler(erreur, QStringLiteral("Ajout impossible (requête non préparée)."), query);
+        return false;
+    }
+
+    query.bindValue(QStringLiteral(":id"), nouvelId);
+    query.bindValue(QStringLiteral(":type"), type.trimmed());
+    query.bindValue(QStringLiteral(":lieu"), lieu.trimmed());
+    query.bindValue(QStringLiteral(":gravite"), gravite);
+    query.bindValue(QStringLiteral(":dateReception"), reception.date().toString(QStringLiteral("yyyy-MM-dd")));
+    query.bindValue(QStringLiteral(":heureReception"), reception.time().toString(QStringLiteral("HH:mm")));
+    query.bindValue(QStringLiteral(":dateFin"),
+                    texteOuNull(fin.date().toString(QStringLiteral("yyyy-MM-dd")), termine));
+    query.bindValue(QStringLiteral(":heureFin"),
+                    texteOuNull(fin.time().toString(QStringLiteral("HH:mm")), termine));
+    query.bindValue(QStringLiteral(":etat"), etat);
+    query.bindValue(QStringLiteral(":duree"), static_cast<int>(dureeMinutes()));
+    query.bindValue(QStringLiteral(":gps"), gps());
+    query.bindValue(QStringLiteral(":garde"), garde);
+
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Ajout impossible."), query);
+        return false;
+    }
+    id = nouvelId;
+    idGarde = garde;
     return true;
 }
 
 bool Intervention::afficher(int id, Intervention &resultat, QString *erreur)
 {
-    for (const Intervention &i : std::as_const(stock())) {
-        if (i.id == id) {
-            resultat = i;
-            return true;
-        }
+    if (!baseOuverte(erreur))
+        return false;
+
+    QSqlQuery query(base());
+    query.prepare(QStringLiteral("SELECT ") + kColonnes + QStringLiteral(" FROM INTERVENTION WHERE ID_INTERVENTION = :id"));
+    query.bindValue(QStringLiteral(":id"), id);
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Lecture de l'intervention impossible."), query);
+        return false;
+    }
+    if (query.next()) {
+        resultat = depuisLigne(query);
+        return true;
     }
     if (erreur)
         *erreur = QStringLiteral("L'intervention demandée n'existe plus.");
@@ -213,80 +347,81 @@ bool Intervention::afficher(int id, Intervention &resultat, QString *erreur)
 
 bool Intervention::modifier(QString *erreur) const
 {
-    for (Intervention &i : stock()) {
-        if (i.id == id) {
-            i = *this;
-            return true;
-        }
-    }
-    if (erreur)
-        *erreur = QStringLiteral("L'intervention %1 n'existe plus : modification impossible.").arg(idText());
-    return false;
-}
+    if (!valider(erreur) || !baseOuverte(erreur))
+        return false;
 
-bool Intervention::supprimer(int id, QString *)
-{
-    auto &v = stock();
-    v.erase(std::remove_if(v.begin(), v.end(), [id](const Intervention &i) { return i.id == id; }), v.end());
+    // Si une garde est précisée, elle doit exister (sinon ID_GARDE reste inchangée)
+    if (idGarde > 0 && !gardeExiste(idGarde, erreur))
+        return false;
+
+    const bool termine = (etat == Etat::Terminee && fin.isValid());
+
+    QSqlQuery query(base());
+    if (!query.prepare(QStringLiteral(
+            "UPDATE INTERVENTION SET "
+            "TYPE = :type, "
+            "LIEU = :lieu, "
+            "GRAVITE = :gravite, "
+            "DATE_RECEPTION_APPEL = TO_DATE(:dateReception, 'YYYY-MM-DD'), "
+            "HEURE_RECEPTION_APPEL = :heureReception, "
+            "DATE_FIN_INTERVENTION = TO_DATE(:dateFin, 'YYYY-MM-DD'), "
+            "HEURE_FIN_INTERVENTION = :heureFin, "
+            "ETAT = :etat, "
+            "DUREE = :duree, "
+            "COORDONNEES_GPS = :gps "
+            "WHERE ID_INTERVENTION = :id"))) {
+        signaler(erreur, QStringLiteral("Modification impossible (requête non préparée)."), query);
+        return false;
+    }
+
+    query.bindValue(QStringLiteral(":type"), type.trimmed());
+    query.bindValue(QStringLiteral(":lieu"), lieu.trimmed());
+    query.bindValue(QStringLiteral(":gravite"), gravite);
+    query.bindValue(QStringLiteral(":dateReception"), reception.date().toString(QStringLiteral("yyyy-MM-dd")));
+    query.bindValue(QStringLiteral(":heureReception"), reception.time().toString(QStringLiteral("HH:mm")));
+    // Date de fin uniquement si l'intervention est terminée, sinon NULL
+    query.bindValue(QStringLiteral(":dateFin"),
+                    texteOuNull(fin.date().toString(QStringLiteral("yyyy-MM-dd")), termine));
+    query.bindValue(QStringLiteral(":heureFin"),
+                    texteOuNull(fin.time().toString(QStringLiteral("HH:mm")), termine));
+    query.bindValue(QStringLiteral(":etat"), etat);
+    query.bindValue(QStringLiteral(":duree"), static_cast<int>(dureeMinutes()));
+    query.bindValue(QStringLiteral(":gps"), gps());
+    query.bindValue(QStringLiteral(":id"), id);
+
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Modification impossible."), query);
+        return false;
+    }
+    if (query.numRowsAffected() == 0) {
+        if (erreur)
+            *erreur = QStringLiteral("L'intervention %1 n'existe plus.").arg(idText());
+        return false;
+    }
     return true;
 }
 
-// ---------------------------------------------------------------------------------------------
-// Fonctionnalités avancées (filtre, tri, pagination, statistiques, zones à risque)
-// ---------------------------------------------------------------------------------------------
-
-QVector<Intervention> Intervention::lister(const Filtre &filtre, int debut, int nombre, QString *)
+bool Intervention::supprimer(int id, QString *erreur)
 {
-    QVector<Intervention> lignes = filtrer(filtre);
-    if (nombre <= 0)
-        return lignes;
-    if (debut >= lignes.size())
-        return {};
-    return lignes.mid(std::max(0, debut), nombre);
-}
+    if (!baseOuverte(erreur))
+        return false;
 
-int Intervention::compter(const Filtre &filtre, QString *)
-{
-    return int(filtrer(filtre).size());
-}
-
-QMap<QString, int> Intervention::statistiquesParGravite(QString *)
-{
-    QMap<QString, int> resultat{{Grav::Elevee, 0}, {Grav::Moyenne, 0}, {Grav::Faible, 0}};
-    for (const Intervention &i : std::as_const(stock())) {
-        const int code = graviteVersCode(i.gravite);
-        resultat[code >= 3 ? Grav::Elevee : code == 2 ? Grav::Moyenne : Grav::Faible] += 1;
+    QSqlQuery query(base());
+    query.prepare(QStringLiteral("DELETE FROM INTERVENTION WHERE ID_INTERVENTION = :id"));
+    query.bindValue(QStringLiteral(":id"), id);
+    if (!query.exec()) {
+        signaler(erreur, QStringLiteral("Suppression impossible."), query);
+        return false;
     }
-    return resultat;
+    if (query.numRowsAffected() == 0) {
+        if (erreur)
+            *erreur = QStringLiteral("L'intervention demandée n'existe plus.");
+        return false;
+    }
+    return true;
 }
 
-// Historique par lieu depuis la date donnée : nombre d'interventions, gravité cumulée, position moyenne.
-QVector<Intervention::ZoneAgregee> Intervention::zonesARisque(const QDateTime &depuis, QString *)
+QVector<Intervention> Intervention::lister(QString *erreur)
 {
-    QHash<QString, ZoneAgregee> parLieu;
-    for (const Intervention &i : std::as_const(stock())) {
-        if (i.reception < depuis)
-            continue;
-        const QString cle = i.lieu.toLower();
-        ZoneAgregee &z = parLieu[cle];
-        z.cle = cle;
-        if (z.nom.isEmpty() || i.lieu < z.nom)
-            z.nom = i.lieu;
-        z.nombre += 1;
-        z.poids += graviteVersCode(i.gravite);
-        z.lat += i.lat;
-        z.lon += i.lon;
-    }
-    QVector<ZoneAgregee> zones;
-    for (ZoneAgregee z : std::as_const(parLieu)) {
-        z.lat /= z.nombre;
-        z.lon /= z.nombre;
-        zones.push_back(z);
-    }
-    return zones;
-}
-
-bool Intervention::roleAutorise(const QString &role)
-{
-    return role == Role::OperateurDispatch || role == Role::ChefCaserne;
+    return lireToutes(erreur);
 }

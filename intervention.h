@@ -1,11 +1,7 @@
 #ifndef INTERVENTION_H
 #define INTERVENTION_H
 
-// Classe Intervention : ses attributs et toutes ses opérations (stockage en mémoire)
-// (CRUD, recherche par GPS, tri par gravité, pagination, statistiques, zones à risque).
-
 #include <QDateTime>
-#include <QMap>
 #include <QString>
 #include <QVector>
 
@@ -20,68 +16,49 @@ inline const QString EnCours  = QStringLiteral("En cours");
 inline const QString Terminee = QStringLiteral("Terminée");
 }
 
-// Rôles de l'application (cahier des charges, tableau des exigences fonctionnelles)
-namespace Role {
-inline const QString Administrateur    = QStringLiteral("Administrateur");
-inline const QString ChefCaserne       = QStringLiteral("Chef de caserne");
-inline const QString OperateurDispatch = QStringLiteral("Opérateur de dispatch");
-inline const QString Magasinier        = QStringLiteral("Magasinier");
-}
-
+// Classe métier du module Interventions (table Oracle INTERVENTION).
+// Toutes les requêtes SQL du module sont écrites ici (requêtes préparées) ; l'interface (AXIS) ne contient aucun SQL.
+// La connexion Oracle est la connexion commune du projet : Connexion::oracle().
 class Intervention
 {
 public:
-    enum class Tri { Aucun, GraviteDecroissante, GraviteCroissante, PlusRecentes };
+    // Attributs (colonnes de la table INTERVENTION)
+    int id = 0;               // ID_INTERVENTION
+    QString type;             // TYPE (obligatoire)
+    QString lieu;             // LIEU (obligatoire, 100 caractères max)
+    QString gravite;          // GRAVITE
+    QString etat;             // ETAT
 
-    // Critères de recherche (coordonnées GPS) et de tri appliqués par la base
-    struct Filtre {
-        QString gps;
-        Tri tri = Tri::Aucun;
-    };
+    double lat = 0.0;         // latitude  \_ stockées ensemble dans COORDONNEES_GPS ("lat, lon", texte)
+    double lon = 0.0;         // longitude /
 
-    // Résultat agrégé par la base pour la détection des zones à risque
-    struct ZoneAgregee {
-        QString cle;
-        QString nom;
-        int nombre = 0;     // interventions sur la période
-        int poids = 0;      // gravité cumulée (élevée = 3, moyenne = 2, faible = 1)
-        double lat = 0.0;
-        double lon = 0.0;
-    };
+    QDateTime reception;      // DATE_RECEPTION_APPEL + HEURE_RECEPTION_APPEL
+    QDateTime fin;            // DATE_FIN_INTERVENTION + HEURE_FIN_INTERVENTION (invalide = pas de fin)
 
-    // --- Attributs -----------------------------------------------------------------------------
-    int id = 0;
-    QString type;
-    QString lieu;
-    QString gravite;
-    QString etat;
-    double lat = 0.0;
-    double lon = 0.0;
-    QDateTime reception;    // date/heure de réception de l'alerte
-    QDateTime fin;          // invalide tant que l'intervention est en cours
+    // ID_GARDE (obligatoire, clé étrangère vers GARDE). 0 = non renseignée : à l'ajout, la première garde
+    // existante est utilisée (LIMITATION PROVISOIRE : l'attribution automatique des gardes viendra plus tard).
+    int idGarde = 0;
 
-    // --- Valeurs calculées ---------------------------------------------------------------------
-    QString idText() const;                 // "I001"
-    QString gps() const;                    // "36.8065, 10.1815"
-    qint64 dureeMinutes() const;            // fin - réception (ou durée écoulée si en cours)
-    QString dureeTexte() const;             // "45 min", "1 h 15"
-    int graviteRang() const;                // 0 = élevée (la plus urgente), 1 = moyenne, 2 = faible
-    bool valider(QString *erreur) const;    // contrôle des champs obligatoires et des valeurs
+    // Valeurs calculées
+    QString idText() const;
+    QString gps() const;
+    qint64 dureeMinutes() const;
+    QString dureeTexte() const;
+    int graviteRang() const;
+    bool valider(QString *erreur) const;
 
-    // --- CRUD ----------------------------------------------------------------------------------
-    bool ajouter(QString *erreur = nullptr);                 // attribue l'identifiant (prochain identifiant)
+    // Lecture d'une saisie « latitude, longitude » ; renvoie false (et un message) si le format ou les bornes sont invalides.
+    static bool lireGps(const QString &texte, double &lat, double &lon, QString *erreur = nullptr);
+
+    // Opérations CRUD
+    bool ajouter(QString *erreur = nullptr);
     static bool afficher(int id, Intervention &resultat, QString *erreur = nullptr);
     bool modifier(QString *erreur = nullptr) const;
     static bool supprimer(int id, QString *erreur = nullptr);
+    static QVector<Intervention> lister(QString *erreur = nullptr);
 
-    // --- Fonctionnalités avancées --------------------------------------------------------------
-    // nombre <= 0 : toutes les lignes ; sinon "nombre" lignes à partir de la ligne "debut" (0 = première)
-    static QVector<Intervention> lister(const Filtre &filtre, int debut, int nombre, QString *erreur = nullptr);
-    static int compter(const Filtre &filtre, QString *erreur = nullptr);
-    static QMap<QString, int> statistiquesParGravite(QString *erreur = nullptr);
-    static QVector<ZoneAgregee> zonesARisque(const QDateTime &depuis, QString *erreur = nullptr);
-
-    static bool roleAutorise(const QString &role);           // opérateur de dispatch ou chef de caserne
+    // Vérifie qu'une garde existe dans la table GARDE.
+    static bool gardeExiste(int idGarde, QString *erreur = nullptr);
 };
 
 #endif // INTERVENTION_H
