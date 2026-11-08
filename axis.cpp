@@ -35,11 +35,31 @@ AXIS::AXIS(QWidget *parent)
     layoutMateriel->setContentsMargins(0, 0, 0, 0);
     layoutMateriel->addWidget(materielPage_);
 
+
+    QLayout *layoutIntervention = ui->PInterv->layout();
+
+    if (!layoutIntervention) {
+        layoutIntervention = new QVBoxLayout(ui->PInterv);
+    }
+
+    // Supprimer les éléments provisoires du layout
+    while (QLayoutItem *item = layoutIntervention->takeAt(0)) {
+
+        if (QWidget *widget = item->widget()) {
+            widget->hide();
+            widget->setParent(nullptr);
+            widget->deleteLater();
+        }
+
+        delete item;
+    }
+
+    // Ajouter la véritable interface Intervention
     interventionPage_ = new InterventionPage(ui->PInterv);
 
-    auto *layoutIntervention = new QVBoxLayout(ui->PInterv);
     layoutIntervention->setContentsMargins(0, 0, 0, 0);
     layoutIntervention->addWidget(interventionPage_);
+
 
     // ===== MODULE VÉHICULES : remplace la page provisoire de PVehicule =====
     ui->lblTitreVehicule->deleteLater();
