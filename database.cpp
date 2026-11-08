@@ -69,7 +69,7 @@ bool Database::open(QString *error)
 QList<Materiel> Database::materiels(const QString &search, const QString &orderColumn)
 {
     // Liste blanche pour éviter toute injection via le nom de colonne
-    static const QStringList allowed = {"reference", "designation", "categorie", "quantite", "date_acquisition"};
+    static const QStringList allowed = {"reference", "designation", "categorie", "quantite", "date_acquisition", "etat"};
     const QString col = allowed.contains(orderColumn) ? orderColumn : "reference";
 
     QSqlQuery q;

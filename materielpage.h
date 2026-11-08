@@ -25,13 +25,11 @@ private slots:
     void clearForm();
     void exportCsv();
     void handleAction(const QString &link);
-    void addMouvement();
 
 private:
     void fillForm(const Materiel &m);
     void refreshMateriels();
     void refreshStats();
-    void refreshMouvements();
     void sendAlertEmail(const QList<Materiel> &critical);
 
     Ui::MaterielPage *ui;   // widgets définis dans materielpage.ui

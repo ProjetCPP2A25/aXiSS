@@ -10,8 +10,6 @@
 static const QStringList kCategories = {"Lutte incendie", "Protection", "Secours"};
 static const char *kDateFmt = "dd/MM/yyyy";
 static const int kRowH = 58;          // hauteur des lignes du tableau des matériels
-static const int kMvRowH = 34;        // hauteur des lignes du tableau des mouvements
-static const int kMaxMouvements = 10; // nombre de mouvements affichés
 
 // ---------- Helpers ----------
 
@@ -71,7 +69,9 @@ MaterielPage::MaterielPage(QWidget *parent) : QWidget(parent), ui(new Ui::Materi
 
     ui->leQuantite->setValidator(new QIntValidator(0, 1000000, this));
     ui->leSeuil->setValidator(new QIntValidator(0, 1000000, this));
-    ui->leMvQte->setValidator(new QIntValidator(1, 1000000, this));
+
+    // Tri : par état
+    ui->cbSort->setItemText(0, "Trier par état");
 
     // Tableau des matériels : largeurs de colonnes (la désignation prend l'espace restant)
     QHeaderView *h = ui->table->horizontalHeader();
@@ -83,16 +83,10 @@ MaterielPage::MaterielPage(QWidget *parent) : QWidget(parent), ui(new Ui::Materi
     for (int c = 0; c < 11; ++c)
         if (widths[c]) ui->table->setColumnWidth(c, widths[c]);
 
-    QHeaderView *hm = ui->tableMv->horizontalHeader();
-    hm->setFixedHeight(32);
-    hm->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
-    hm->setSectionResizeMode(QHeaderView::Stretch);
-
     // Signaux / slots
     connect(ui->btnAdd, &QPushButton::clicked, this, &MaterielPage::submitForm);
     connect(ui->btnClear, &QPushButton::clicked, this, &MaterielPage::clearForm);
     connect(ui->btnExport, &QPushButton::clicked, this, &MaterielPage::exportCsv);
-    connect(ui->btnMvSave, &QPushButton::clicked, this, &MaterielPage::addMouvement);
     connect(ui->leSearch, &QLineEdit::textChanged, this, &MaterielPage::refreshMateriels);
     connect(ui->cbSort, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             &MaterielPage::refreshMateriels);
@@ -111,13 +105,11 @@ void MaterielPage::refresh()
 {
     refreshMateriels();
     refreshStats();
-    refreshMouvements();
 }
 
 void MaterielPage::refreshMateriels()
 {
-    static const char *cols[] = {"reference", "designation", "categorie", "quantite", "date_acquisition"};
-    const QList<Materiel> items = Database::materiels(ui->leSearch->text().trimmed(), cols[ui->cbSort->currentIndex()]);
+    const QList<Materiel> items = Database::materiels(ui->leSearch->text().trimmed(), "etat");
 
     ui->table->setRowCount(0);
     ui->table->setRowCount(items.size());
@@ -157,7 +149,7 @@ void MaterielPage::refreshMateriels()
         cl->setSpacing(2);
         // Boutons-emoji : Afficher / Modifier / Supprimer
         const struct { const char *emoji, *tip, *kind; } actions[] = {
-                        {"👁️", "Afficher", "view"}, {"✏️", "Modifier", "edit"}, {"🗑️", "Supprimer", "del"}};
+                        {"👁️", "Afficher", "view"}, {"✏️", "Modifier", "edit"}, {"🗑️","Supprimer", "del"}};
         for (const auto &a : actions) {
             auto *btn = new QToolButton;
             btn->setText(a.emoji);
@@ -214,42 +206,6 @@ void MaterielPage::refreshStats()
         ui->banner->hide();
         lastCritical.clear();
     }
-
-    // Liste des matériels pour les mouvements (on conserve la sélection)
-    const int selected = ui->cbMvMat->currentData().toInt();
-    ui->cbMvMat->clear();
-    for (const Materiel &m : all) ui->cbMvMat->addItem(m.reference + " " + m.designation, m.id);
-    const int idx = ui->cbMvMat->findData(selected);
-    if (idx >= 0) ui->cbMvMat->setCurrentIndex(idx);
-
-    const int selEmp = ui->cbMvEmp->currentData().toInt();
-    ui->cbMvEmp->clear();
-    for (const DatabaseEmploye &e : Database::employes())
-        ui->cbMvEmp->addItem(e.nom, e.id);
-    const int eidx = ui->cbMvEmp->findData(selEmp);
-    if (eidx >= 0) ui->cbMvEmp->setCurrentIndex(eidx);
-}
-
-void MaterielPage::refreshMouvements()
-{
-    const QList<Mouvement> list = Database::mouvements(kMaxMouvements);
-    ui->tableMv->setRowCount(0);
-    ui->tableMv->setRowCount(list.size());
-    for (int r = 0; r < list.size(); ++r) {
-        const Mouvement &m = list[r];
-        auto item = [&](int c, const QString &s) {
-            auto *it = new QTableWidgetItem(s);
-            it->setFlags(Qt::ItemIsEnabled);
-            ui->tableMv->setItem(r, c, it);
-        };
-        item(0, m.date.toString(kDateFmt));
-        ui->tableMv->setCellWidget(r, 1, badgeCell(m.type, m.type == "Entrée" ? "ok" : "warn"));
-        item(2, m.materielNom);
-        item(3, QString::number(m.quantite));
-        item(4, m.motif);
-        item(5, m.employeNom);
-    }
-    ui->tableMv->setFixedHeight(32 + qMax(list.size(), 1) * kMvRowH + 2);
 }
 
 // ---------- Actions ----------
@@ -346,7 +302,7 @@ void MaterielPage::handleAction(const QString &link)
     } else if (kind == "del") {
         const auto rep = QMessageBox::question(
             this, "Supprimer",
-            QString("Supprimer « %1 » ?\nSes mouvements de stock seront également supprimés.").arg(m.designation));
+            QString("Supprimer « %1 » ?").arg(m.designation));
         if (rep != QMessageBox::Yes) return;
         QString err;
         if (!Database::deleteMateriel(id, &err)) {
@@ -356,46 +312,6 @@ void MaterielPage::handleAction(const QString &link)
         if (editingId == id) clearForm();
         refresh();
     }
-}
-
-void MaterielPage::addMouvement()
-{
-    QStringList errors;
-    if (ui->cbMvMat->currentIndex() < 0) errors << "Aucun matériel sélectionné.";
-    bool ok = false;
-    const int qte = ui->leMvQte->text().toInt(&ok);
-    if (!ok || qte <= 0) errors << "La quantité doit être un entier supérieur à 0.";
-
-    QDate date = QDate::currentDate();   // date vide = aujourd'hui
-    if (!ui->leMvDate->text().trimmed().isEmpty()) {
-        date = QDate::fromString(ui->leMvDate->text().trimmed(), kDateFmt);
-        if (!date.isValid()) errors << "Date invalide (format jj/mm/aaaa).";
-    }
-    if (ui->leMvMotif->text().trimmed().isEmpty()) errors << "Le motif est obligatoire.";
-    if (ui->cbMvEmp->currentIndex() < 0) errors << "Aucun employé sélectionné.";
-
-    if (!errors.isEmpty()) {
-        QMessageBox::warning(this, "Saisie invalide", errors.join("\n"));
-        return;
-    }
-
-    Mouvement mv;
-    mv.date = date;
-    mv.type = ui->cbMvType->currentText();
-    mv.materielId = ui->cbMvMat->currentData().toInt();
-    mv.quantite = qte;
-    mv.motif = ui->leMvMotif->text().trimmed();
-    mv.employeId = ui->cbMvEmp->currentData().toInt();
-
-    QString err;
-    if (!Database::addMouvement(mv, &err)) {
-        QMessageBox::warning(this, "Mouvement refusé", err);
-        return;
-    }
-    ui->leMvDate->clear();
-    ui->leMvQte->clear();
-    ui->leMvMotif->clear();
-    refresh();
 }
 
 void MaterielPage::exportCsv()
@@ -433,3 +349,4 @@ void MaterielPage::sendAlertEmail(const QList<Materiel> &critical)
         lines << QString("  - %1 %2 : %3 en stock (seuil %4)").arg(m.reference, m.designation).arg(m.quantite).arg(m.seuil);
     qInfo().noquote() << "[ALERTE STOCK] Email à envoyer au magasinier :\n" + lines.join("\n");
 }
+
