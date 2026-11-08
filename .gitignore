@@ -1,8 +1,0 @@
-build/
-build-*/
-.qtcreator/
-*.user
-*.user.*
-.qtc_clangd/
-*.o
-*.exe
