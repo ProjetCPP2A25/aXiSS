@@ -1,0 +1,17 @@
+release/main.o
+release/axis.o
+release/connexion.o
+release/employe.o
+release/intervention.o
+release/materiel.o
+release/vehicule.o
+release/entretien.o
+release/entretiendialog.o
+release/charts.o
+release/vehiculedonut.o
+release/qrc_ressources.o
+release/moc_axis.o
+release/moc_employe.o
+release/moc_entretiendialog.o
+release/moc_charts.o
+release/moc_vehiculedonut.o

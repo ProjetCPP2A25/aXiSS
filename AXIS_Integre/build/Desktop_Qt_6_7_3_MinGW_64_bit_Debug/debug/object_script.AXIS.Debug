@@ -1,0 +1,17 @@
+debug/main.o
+debug/axis.o
+debug/connexion.o
+debug/employe.o
+debug/intervention.o
+debug/materiel.o
+debug/vehicule.o
+debug/entretien.o
+debug/entretiendialog.o
+debug/charts.o
+debug/vehiculedonut.o
+debug/qrc_ressources.o
+debug/moc_axis.o
+debug/moc_employe.o
+debug/moc_entretiendialog.o
+debug/moc_charts.o
+debug/moc_vehiculedonut.o
