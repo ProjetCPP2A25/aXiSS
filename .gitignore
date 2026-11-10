@@ -1,0 +1,19 @@
+# Build outputs
+debug/
+release/
+build/
+Makefile
+Makefile.Debug
+Makefile.Release
+.qmake.stash
+
+# Generated UI headers
+ui_*.h
+
+# Qt Creator user files
+.qtcreator/
+
+# Object files
+*.o
+*.obj
+*.exe
