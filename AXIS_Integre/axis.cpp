@@ -277,6 +277,8 @@ AXIS::AXIS(QWidget *parent)
     connect(ui->btnViderEmpl, &QPushButton::clicked, this, &AXIS::viderFormulaire);
     connect(sidebarEmpl_, &SidebarFrame::menuRequested, this, &AXIS::allerAuMenu);
     connect(sidebarEmpl_, &SidebarFrame::logoutRequested, this, &QWidget::close);
+    initialiserMetiersEmployes();
+    initialiserMenuPrincipal();
 
     // ==========================================
     // AUTRES MODULES (interface dans axis.ui)
@@ -312,12 +314,15 @@ void AXIS::rafraichirListe()
 {
     QTableWidget *t = ui->tblEmpl;
     t->setRowCount(0);
-    const QVector<Employe> liste = Employe::lister();
+    // Recherche par nom + tri par grade (fonctions de la classe Employe)
+    const QString recherche = leRechercheEmpl_ ? leRechercheEmpl_->text().trimmed() : QString();
+    const int tri = cmbTriEmpl_ ? cmbTriEmpl_->currentIndex() : 0;
+    const QVector<Employe> liste = Employe::trierParGrade(tri == 0, recherche);   // 0 : croissant, 1 : décroissant
 
     for (const Employe &e : liste) {
         const int r = t->rowCount();
         t->insertRow(r);
-        t->setRowHeight(r, 76);
+        t->setRowHeight(r, 100);
         const QStringList v = {e.id, e.nom, e.prenom, e.telephone, e.email, e.grade, QString::number(e.age), e.poste,
                                QString::number(e.heures) + " h", QString::number(e.conges) + " j"};
         for (int c = 0; c < v.size(); ++c) {
@@ -353,8 +358,10 @@ void AXIS::rafraichirListe()
         mk("Afficher", [this, id] { afficherEmploye(id); });
         mk("Modifier", [this, id] { modifierEmploye(id); });
         mk("Supprimer", [this, id] { supprimerEmploye(id); });
+        mk("Attestation", [this, id] { exporterAttestationEmploye(id); });
         t->setCellWidget(r, 11, aw);
     }
+    rafraichirStatsEmployes();
 }
 
 // ------------------------------------------------------------------ CRUD
@@ -414,6 +421,7 @@ void AXIS::enregistrerEmploye()
         QMessageBox::critical(this, "Erreur", "Opération impossible : " + Employe::derniereErreur());
         return;
     }
+    journaliserActivite(QString("a %1 l'employé %2").arg(edition ? QString("modifié") : QString("ajouté"), e.nomComplet()));
     viderFormulaire();
     rafraichirListe();
 }
@@ -443,10 +451,12 @@ void AXIS::afficherEmploye(const QString &id)
 void AXIS::supprimerEmploye(const QString &id)
 {
     if (QMessageBox::question(this, "Supprimer", "Supprimer cet employé ?") != QMessageBox::Yes) return;
+    const QString nomSupprime = Employe::trouver(id).nomComplet();
     if (!Employe::supprimer(id)) {
         QMessageBox::critical(this, "Erreur", "Suppression impossible : " + Employe::derniereErreur());
         return;
     }
+    journaliserActivite("a supprimé l'employé " + nomSupprime);
     rafraichirListe();
 }
 
@@ -1899,12 +1909,17 @@ void AXIS::chargerLogo(QLabel *label, int largeur)
 
 void AXIS::allerAuMenu()
 {
+    rafraichirJournalMenu();
     ui->SWAxis->setCurrentIndex(0);
     ui->stackedWidgetEmpl->setCurrentIndex(0);
 }
 
 void AXIS::allerAuModule(int module)
 {
+    if (!Employe::moduleAutorise(session_.role, module)) {      // droits d'accès
+        QMessageBox::warning(this, "Accès refusé", "Votre rôle (" + session_.role + ") ne donne pas accès à ce module.");
+        return;
+    }
     if (module == 0) {                              // module Employés : page CRUD
         ui->SWAxis->setCurrentIndex(0);
         ui->stackedWidgetEmpl->setCurrentIndex(1);

@@ -20,7 +20,13 @@ int main(int argc, char *argv[])
         QMessageBox::critical(nullptr, "Base de données", erreur);
         return 1;
     }
+    // Page de connexion : l'application ne s'ouvre qu'après une authentification réussie
+    LoginDialog login;
+    if (login.exec() != QDialog::Accepted)
+        return 0;
+
     AXIS w;
+    w.definirUtilisateur(login.session());
     w.resize(1500, 850);
     w.show();
     return a.exec();

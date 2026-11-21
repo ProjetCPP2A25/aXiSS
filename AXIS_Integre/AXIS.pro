@@ -40,5 +40,6 @@ RESOURCES += \
 DISTFILES += \
     style.qss \
     sql/oracle_employe.sql \
+    sql/oracle_login.sql \
     sql/oracle_vehicule.sql \
     sql/oracle_vehicule_exemples.sql

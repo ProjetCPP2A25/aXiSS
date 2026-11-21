@@ -15,6 +15,9 @@ QT_END_NAMESPACE
 class SidebarFrame;
 class QLabel;
 class QLineEdit;
+class QComboBox;
+class QTimer;
+class BarChartWidget;
 class QNetworkAccessManager;
 class Vehicule;
 
@@ -25,6 +28,9 @@ class AXIS : public QMainWindow
 public:
     explicit AXIS(QWidget *parent = nullptr);
     ~AXIS() override;
+
+    // Utilisateur connecté : applique ses droits d'accès au menu principal (voir Employe::moduleAutorise)
+    void definirUtilisateur(const SessionEmploye &session);
 
 private:
     // ==========================================
@@ -40,6 +46,26 @@ private:
 
     QString editingId_;
     SidebarFrame *sidebarEmpl_ = nullptr;
+
+    // Métiers innovants des employés (les fonctions métier sont dans la classe Employe) :
+    // recherche par nom, tri par grade, export de l'attestation (Excel), statistiques.
+    void initialiserMetiersEmployes();              // barre de recherche/tri + panneau de statistiques
+    void rafraichirStatsEmployes();                 // anneau (disponibilité) + barres verticales (grade)
+    void exporterAttestationEmploye(const QString &id);
+
+    // Menu principal : bandeau de bienvenue (date, heure en direct) et mini-journal d'activité
+    void initialiserMenuPrincipal();
+    void majBandeauMenu();
+    void rafraichirJournalMenu();
+    void journaliserActivite(const QString &action);   // enregistre « <utilisateur> <action> » dans le journal
+    QLabel *lblHorlogeMenu_ = nullptr;
+    QLabel *lblJournalMenu_ = nullptr;
+
+    QLineEdit *leRechercheEmpl_ = nullptr;
+    QComboBox *cmbTriEmpl_ = nullptr;
+    QLabel *donutDispoEmpl_ = nullptr;
+    QLabel *legendDispoEmpl_ = nullptr;
+    BarChartWidget *barresGradeEmpl_ = nullptr;
 
     // ==========================================
     // MODULE INTERVENTIONS
@@ -147,6 +173,8 @@ private:
     void allerAuModule(int module);          // module : 0 Employés, 1 Interventions, 2 Véhicules, 3 Matériels, 4 Gardes
     void allerAuMenu();
     void chargerLogo(QLabel *label, int largeur);
+
+    SessionEmploye session_;
 
     Ui::AXIS *ui;
 };

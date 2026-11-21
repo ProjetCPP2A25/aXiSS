@@ -4,10 +4,10 @@
 #include <QVariant>
 
 // ====== ORACLE ======
-static const QString ORACLE_NOM          = "oracle";              // nom interne de la connexion Qt
-static const QString ORACLE_DSN = "AXIS_ODBC";               // source ODBC (Administrateur ODBC 64 bits)
+static const QString ORACLE_NOM          = "axis";              // nom interne de la connexion Qt
+static const QString ORACLE_DSN = "axis";               // source ODBC (Administrateur ODBC 64 bits)
 static const QString ORACLE_UTILISATEUR  = "axis";                // utilisateur Oracle (connexion SQL Developer « axis »)
-static const QString ORACLE_MOT_DE_PASSE = "1234";  // ne jamais pousser le vrai mot de passe sur GitHub
+static const QString ORACLE_MOT_DE_PASSE = "axis";  // ne jamais pousser le vrai mot de passe sur GitHub
 // ====================
 
 QSqlDatabase Connexion::oracle()
