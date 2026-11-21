@@ -62,6 +62,27 @@ private:
 
     int interventionEnEdition_ = 0;                 // 0 : mode ajout ; sinon ID_INTERVENTION en cours de modification
 
+    // Fonctionnalités avancées : tri, recherche GPS, pagination, export Excel, statistiques, zones à risque, carte
+    void initialiserFonctionsAvanceesInterventions();   // connexions + création de la carte (appelée une seule fois)
+    void appliquerFiltreInterventions();            // recherche + tri + pagination à partir de interventions_
+    void remplirTableauInterventions(const QVector<Intervention> &page);
+    void exporterInterventionsExcel();
+    void majStatistiquesInterventions();            // 4 barres verticales par gravité
+    void majZonesRisqueInterventions();             // zones à risque (historique + météo) : liste + cercles sur la carte
+    void majCarteInterventions();                   // marqueurs de la carte
+    void chargerMeteoInterventions();               // météo actuelle (Open-Meteo) puis recalcul des zones à risque
+    void selectionnerInterventionSurCarte(int id);
+
+    QVector<Intervention> interventions_;           // toutes les interventions lues dans Oracle
+    QVector<Intervention> interventionsFiltrees_;   // après recherche et tri (toutes pages)
+    int pageIntervention_ = 0;                      // page affichée (à partir de 0)
+    Intervention::Meteo meteoInterventions_;
+    QNetworkAccessManager *meteoReseau_ = nullptr;
+    CarteWidget *carte_ = nullptr;
+    bool carteCadree_ = false;
+    QDateTime meteoHeure_;                          // dernier chargement de la météo
+    QLabel *labelZonesContenu_ = nullptr;
+
     // ==========================================
     // MODULE VEHICULES
     // ==========================================

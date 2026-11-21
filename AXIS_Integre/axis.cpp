@@ -3,6 +3,7 @@
 #include "garde.h"
 
 #include <QtWidgets>
+#include <QDesktopServices>
 #include <QRegularExpressionValidator>
 #include <QSslSocket>
 #include <QTcpSocket>
@@ -33,6 +34,16 @@ enum Col { ColId, ColType, ColLieu, ColGravite, ColGps, ColReception, ColFin, Co
            NbColonnes };
 
 const char *const kFormatDate = "dd/MM/yyyy HH:mm";
+const int kInterventionsParPage = 9;              // lignes visibles dans le tableau (pagination)
+const int kBaseBarres = 185;                      // ligne de base et hauteur maximale des barres de statistiques
+const int kHauteurMaxBarre = 140;
+
+QColor couleurMarqueur(const QString &gravite)    // même code couleur que la légende de la carte
+{
+    if (gravite == Grav::Elevee)  return QColor("#D93025");
+    if (gravite == Grav::Moyenne) return QColor("#F29900");
+    return QColor("#1E8E3E");
+}
 
 struct Couleurs {
     const char *fond;
@@ -424,9 +435,9 @@ void AXIS::afficherEmploye(const QString &id)
     const Employe e = Employe::trouver(id);
     if (e.id.isEmpty()) return;
     QMessageBox::information(this, e.nomComplet(),
-        QString("ID : %1\nTéléphone : %2\nEmail : %3\nGrade : %4\nPoste : %5\nÂge : %6\n"
-                "Heures/semaine : %7\nCongés restants : %8\nDisponibilité : %9")
-            .arg(e.id, e.telephone, e.email, e.grade, e.poste).arg(e.age).arg(e.heures).arg(e.conges).arg(e.disponibilite));
+                             QString("ID : %1\nTéléphone : %2\nEmail : %3\nGrade : %4\nPoste : %5\nÂge : %6\n"
+                                     "Heures/semaine : %7\nCongés restants : %8\nDisponibilité : %9")
+                                 .arg(e.id, e.telephone, e.email, e.grade, e.poste).arg(e.age).arg(e.heures).arg(e.conges).arg(e.disponibilite));
 }
 
 void AXIS::supprimerEmploye(const QString &id)
@@ -443,7 +454,7 @@ void AXIS::supprimerEmploye(const QString &id)
 // MODULE INTERVENTIONS
 // ==========================================
 // Présentation du tableau / du formulaire et connexions des widgets de la page PInterv (axis.ui).
-// Recherche, tri, pagination, export, statistiques, zones à risque et carte : interface conservée, sans logique.
+// Recherche GPS, tri, pagination, export Excel, statistiques, zones à risque et carte : voir « Fonctionnalités avancées ».
 void AXIS::initialiserModuleInterventions()
 {
     // ----- Tableau -----
@@ -494,6 +505,7 @@ void AXIS::initialiserModuleInterventions()
     connect(ui->btnMenuPrincipal, &QPushButton::clicked, this, &AXIS::allerAuMenu);
     connect(ui->btnDeconnexion, &QPushButton::clicked, this, &QWidget::close);
 
+    initialiserFonctionsAvanceesInterventions();
     viderFormulaireIntervention();
 }
 
@@ -638,6 +650,22 @@ void AXIS::afficherIntervention(int id)
     ajouterLigne(QStringLiteral("État"), creerEtiquettePastille(it.etat, couleursEtat(it.etat)));
     racine->addLayout(form);
 
+    // Historique : autres interventions survenues au même endroit (rayon de 300 m)
+    const QVector<Intervention> historique = Intervention::historiqueProche(interventions_, it, 300.0);
+    auto *titreHisto = new QLabel(historique.isEmpty()
+                                      ? QStringLiteral("Historique du lieu : aucune autre intervention (rayon 300 m)")
+                                      : QStringLiteral("Historique du lieu (rayon 300 m) : %1 autre%2")
+                                            .arg(historique.size()).arg(historique.size() > 1 ? "s" : ""));
+    titreHisto->setStyleSheet(QStringLiteral("color: #AAB0B6; background: transparent; border: none;"));
+    racine->addWidget(titreHisto);
+    for (int k = 0; k < historique.size() && k < 6; ++k) {
+        const Intervention &h = historique[k];
+        auto *ligne = new QLabel(QStringLiteral("%1 · %2 · %3 · %4")
+                                     .arg(h.idText(), formatDateHeure(h.reception), h.type, h.gravite));
+        ligne->setStyleSheet(QStringLiteral("color: #E5E7EB; background: transparent; border: none; font-size: 12px;"));
+        racine->addWidget(ligne);
+    }
+
     auto *boutons = new QHBoxLayout;
     boutons->addStretch();
     auto *bFermer = new QPushButton(QStringLiteral("Fermer"));
@@ -715,23 +743,60 @@ void AXIS::supprimerIntervention(int id)
 }
 
 // ------------------------------------------------------------ Liste
+// Relit la table Oracle puis rafraîchit tout ce qui en dépend : tableau (recherche, tri, pagination), statistiques,
+// carte et zones à risque.
 void AXIS::rafraichirListeInterventions()
 {
     QString erreur;
-    const QVector<Intervention> liste = Intervention::lister(&erreur);
-    QTableWidget *t = ui->tableInterventions;
-    t->clearContents();
-    t->setRowCount(0);
+    interventions_ = Intervention::lister(&erreur);
     if (!erreur.isEmpty()) {
+        interventions_.clear();
+        interventionsFiltrees_.clear();
+        ui->tableInterventions->clearContents();
+        ui->tableInterventions->setRowCount(0);
         ui->labelPagination->setText(QStringLiteral("Lecture impossible"));
         QMessageBox::critical(this, QStringLiteral("Erreur de la base de données"), erreur);
         return;
     }
+    appliquerFiltreInterventions();
+    majStatistiquesInterventions();
+    majCarteInterventions();
+    majZonesRisqueInterventions();
+    chargerMeteoInterventions();
+}
 
-    // Liste vide : message explicite à la place de la pagination
-    ui->labelPagination->setText(liste.isEmpty()
-                                     ? QStringLiteral("Aucune intervention enregistrée")
-                                     : QStringLiteral("%1 intervention%2").arg(liste.size()).arg(liste.size() > 1 ? "s" : ""));
+// Recherche (coordonnées GPS) + tri + pagination, à partir de la liste lue dans la base.
+void AXIS::appliquerFiltreInterventions()
+{
+    QVector<Intervention> liste = Intervention::rechercherGps(interventions_, ui->editRecherche->text());
+    switch (ui->comboTri->currentIndex()) {
+    case 1:  Intervention::trierParGravite(liste); break;            // élevée → faible
+    case 2:  Intervention::trierParGraviteCroissante(liste); break;  // faible → élevée
+    default: Intervention::trierParId(liste); break;                 // « Aucun tri » : ordre des ID
+    }
+    interventionsFiltrees_ = liste;
+
+    const int pages = std::max(1, int((liste.size() + kInterventionsParPage - 1) / kInterventionsParPage));
+    pageIntervention_ = std::clamp(pageIntervention_, 0, pages - 1);
+    remplirTableauInterventions(liste.mid(pageIntervention_ * kInterventionsParPage, kInterventionsParPage));
+
+    if (interventions_.isEmpty())
+        ui->labelPagination->setText(QStringLiteral("Aucune intervention enregistrée"));
+    else if (liste.isEmpty())
+        ui->labelPagination->setText(QStringLiteral("Aucun résultat"));
+    else
+        ui->labelPagination->setText(QStringLiteral("Page %1 / %2  ·  %3 intervention%4")
+                                         .arg(pageIntervention_ + 1).arg(pages).arg(liste.size())
+                                         .arg(liste.size() > 1 ? "s" : ""));
+    ui->btnPagePrecedente->setEnabled(pageIntervention_ > 0);
+    ui->btnPageSuivante->setEnabled(pageIntervention_ < pages - 1);
+}
+
+void AXIS::remplirTableauInterventions(const QVector<Intervention> &page)
+{
+    QTableWidget *t = ui->tableInterventions;
+    t->clearContents();
+    t->setRowCount(0);
 
     auto creerItem = [](const QString &texte, const QString &infobulle) {
         auto *item = new QTableWidgetItem(texte);
@@ -740,9 +805,9 @@ void AXIS::rafraichirListeInterventions()
         return item;
     };
 
-    t->setRowCount(liste.size());
-    for (int r = 0; r < liste.size(); ++r) {
-        const Intervention &i = liste[r];
+    t->setRowCount(page.size());
+    for (int r = 0; r < page.size(); ++r) {
+        const Intervention &i = page[r];
         t->setRowHeight(r, 46);
 
         auto *idItem = creerItem(i.idText(), i.idText());
@@ -780,6 +845,230 @@ void AXIS::rafraichirListeInterventions()
         connect(bSupprimer, &QToolButton::clicked, this, [this, id] { supprimerIntervention(id); });
         t->setCellWidget(r, ColActions, actions);
     }
+}
+
+// ------------------------------------------------------------ Fonctionnalités avancées
+void AXIS::initialiserFonctionsAvanceesInterventions()
+{
+    // ----- Tri -----
+    ui->comboTri->clear();
+    ui->comboTri->addItems({QStringLiteral("Aucun tri"), QStringLiteral("Gravité : élevée → faible"),
+                            QStringLiteral("Gravité : faible → élevée")});
+    connect(ui->comboTri, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [this] {
+        pageIntervention_ = 0;
+        appliquerFiltreInterventions();
+    });
+
+    // ----- Recherche par coordonnées GPS -----
+    ui->editRecherche->setPlaceholderText(QStringLiteral("Coordonnées GPS (ex. 36.8065, 10.1815)"));
+    ui->editRecherche->setClearButtonEnabled(true);
+    connect(ui->editRecherche, &QLineEdit::textChanged, this, [this] {
+        pageIntervention_ = 0;
+        appliquerFiltreInterventions();
+    });
+
+    // ----- Pagination -----
+    connect(ui->btnPagePrecedente, &QPushButton::clicked, this, [this] {
+        --pageIntervention_;
+        appliquerFiltreInterventions();
+    });
+    connect(ui->btnPageSuivante, &QPushButton::clicked, this, [this] {
+        ++pageIntervention_;
+        appliquerFiltreInterventions();
+    });
+
+    // ----- Export Excel -----
+    connect(ui->btnExporterInterventions, &QPushButton::clicked, this, &AXIS::exporterInterventionsExcel);
+
+    // ----- Zones à risque : zone de texte dans le cadre existant -----
+    labelZonesContenu_ = new QLabel(ui->frameZonesRisque);
+    labelZonesContenu_->setGeometry(14, 42, ui->frameZonesRisque->width() - 28, ui->frameZonesRisque->height() - 52);
+    labelZonesContenu_->setTextFormat(Qt::RichText);
+    labelZonesContenu_->setWordWrap(true);
+    labelZonesContenu_->setAlignment(Qt::AlignTop | Qt::AlignLeft);
+    labelZonesContenu_->setStyleSheet(QStringLiteral("color: #E5E7EB; font-size: 13px; background: transparent; border: none;"));
+
+    // ----- Carte : remplace la grille factice du cadre « frameMap » par une vraie carte OpenStreetMap -----
+    const QList<QFrame *> grille = ui->frameMap->findChildren<QFrame *>(QRegularExpression(QStringLiteral("^line[HV]\\d+$")));
+    for (QFrame *f : grille)
+        f->deleteLater();
+    carte_ = new CarteWidget(ui->frameMap);
+    carte_->setGeometry(1, 1, ui->frameMap->width() - 2, ui->frameMap->height() - 2);
+    carte_->setCaserne(Caserne::Lat, Caserne::Lon, Caserne::Nom);
+    carte_->show();
+    ui->labelMapHint->setText(QStringLiteral("Cliquer sur un point : distance + itinéraire depuis la caserne"));
+    connect(carte_, &CarteWidget::marqueurSelectionne, this, [this](int id) { selectionnerInterventionSurCarte(id); });
+
+    // Clic sur une ligne du tableau : l'intervention est localisée sur la carte (distance + trajet)
+    connect(ui->tableInterventions, &QTableWidget::cellClicked, this, [this](int ligne, int colonne) {
+        if (colonne == ColActions)
+            return;
+        if (auto *it = ui->tableInterventions->item(ligne, ColId)) {
+            const int id = it->data(Qt::UserRole).toInt();
+            carte_->selectionner(id);
+            ui->labelMapHint->setText(QStringLiteral("%1 localisée sur la carte (en bas de page)")
+                                          .arg(it->text()));
+        }
+    });
+
+    meteoReseau_ = new QNetworkAccessManager(this);
+}
+
+void AXIS::selectionnerInterventionSurCarte(int id)
+{
+    // Se place sur la page du tableau qui contient l'intervention et sélectionne sa ligne
+    for (int k = 0; k < interventionsFiltrees_.size(); ++k) {
+        if (interventionsFiltrees_[k].id != id)
+            continue;
+        pageIntervention_ = int(k / kInterventionsParPage);
+        appliquerFiltreInterventions();
+        ui->tableInterventions->selectRow(k % kInterventionsParPage);
+        ui->labelMapHint->setText(QStringLiteral("%1 sélectionnée").arg(interventionsFiltrees_[k].idText()));
+        return;
+    }
+}
+
+// ----- 3 : export Excel -----
+void AXIS::exporterInterventionsExcel()
+{
+    if (interventionsFiltrees_.isEmpty()) {
+        QMessageBox::information(this, QStringLiteral("Export Excel"), QStringLiteral("Aucune intervention à exporter."));
+        return;
+    }
+    const QString proposition = QDir(QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation))
+                                    .filePath(QStringLiteral("interventions_%1.xlsx")
+                                                  .arg(QDate::currentDate().toString(QStringLiteral("yyyy-MM-dd"))));
+    QString chemin = QFileDialog::getSaveFileName(this, QStringLiteral("Exporter les interventions"), proposition,
+                                                  QStringLiteral("Classeur Excel (*.xlsx)"));
+    if (chemin.isEmpty())
+        return;
+    if (!chemin.endsWith(QLatin1String(".xlsx"), Qt::CaseInsensitive))
+        chemin += QStringLiteral(".xlsx");
+
+    QString erreur;
+    if (!Intervention::exporterExcel(interventionsFiltrees_, chemin, &erreur)) {
+        QMessageBox::critical(this, QStringLiteral("Export impossible"), erreur);
+        return;
+    }
+    const QString pluriel = interventionsFiltrees_.size() > 1 ? QStringLiteral("s") : QString();
+    QMessageBox boite(QMessageBox::Information, QStringLiteral("Export Excel"),
+                      QStringLiteral("%1 intervention%2 exportée%2 :\n%3")
+                          .arg(interventionsFiltrees_.size()).arg(pluriel).arg(chemin),
+                      QMessageBox::NoButton, this);
+    QPushButton *ouvrir = boite.addButton(QStringLiteral("Ouvrir le fichier"), QMessageBox::AcceptRole);
+    boite.addButton(QStringLiteral("Fermer"), QMessageBox::RejectRole);
+    boite.exec();
+    if (boite.clickedButton() == ouvrir)
+        QDesktopServices::openUrl(QUrl::fromLocalFile(chemin));
+}
+
+// ----- 4 : statistiques par gravité (barres verticales) -----
+void AXIS::majStatistiquesInterventions()
+{
+    const Intervention::StatsGravite s = Intervention::statistiques(interventions_);
+    const int maximum = std::max(1, s.maximum());
+    auto maj = [maximum](QFrame *barre, QLabel *compteur, int n) {
+        const int h = n == 0 ? 3 : std::max(6, kHauteurMaxBarre * n / maximum);
+        barre->setGeometry(barre->x(), kBaseBarres - h, barre->width(), h);
+        compteur->setText(QString::number(n));
+        compteur->setGeometry(compteur->x(), kBaseBarres - h - 32, compteur->width(), compteur->height());
+    };
+    maj(ui->barElevee, ui->labelCountElevee, s.elevee);
+    maj(ui->barMoyenne, ui->labelCountMoyenne, s.moyenne);
+    maj(ui->barFaible, ui->labelCountFaible, s.faible);
+}
+
+// ----- 6 : marqueurs de la carte -----
+void AXIS::majCarteInterventions()
+{
+    QVector<CarteWidget::Marqueur> marqueurs;
+    for (const Intervention &i : interventions_) {
+        if (i.lat == 0.0 && i.lon == 0.0)               // GPS illisible : pas de point sur la carte
+            continue;
+        CarteWidget::Marqueur m;
+        m.id = i.id;
+        m.lat = i.lat;
+        m.lon = i.lon;
+        m.couleur = couleurMarqueur(i.gravite);
+        m.titre = QStringLiteral("%1 · %2 · gravité %3").arg(i.idText(), i.type, i.gravite.toLower());
+        m.lieu = i.lieu;
+        m.etiquette = QStringLiteral("%1\n%2\n%3").arg(m.titre, i.lieu, i.etat);
+        marqueurs.push_back(m);
+    }
+    const bool premiere = !marqueurs.isEmpty() && carte_->selection() == 0;
+    carte_->setMarqueurs(marqueurs);
+    if (premiere && !carteCadree_) {                    // cadrage automatique une seule fois (ensuite : vue de l'utilisateur)
+        carte_->ajusterVue();
+        carteCadree_ = true;
+    }
+}
+
+// ----- 5 : zones à risque (historique + météo) -----
+void AXIS::chargerMeteoInterventions()
+{
+    // Météo actuelle à la caserne (Open-Meteo, gratuit, sans clé). Rechargée au plus toutes les 10 minutes.
+    if (meteoHeure_.isValid() && meteoHeure_.secsTo(QDateTime::currentDateTime()) < 600)
+        return;
+    meteoHeure_ = QDateTime::currentDateTime();
+
+    QUrl url(QStringLiteral("https://api.open-meteo.com/v1/forecast"));
+    QUrlQuery q;
+    q.addQueryItem(QStringLiteral("latitude"), QString::number(Caserne::Lat, 'f', 4));
+    q.addQueryItem(QStringLiteral("longitude"), QString::number(Caserne::Lon, 'f', 4));
+    q.addQueryItem(QStringLiteral("current"), QStringLiteral("temperature_2m,precipitation,wind_speed_10m"));
+    q.addQueryItem(QStringLiteral("timezone"), QStringLiteral("auto"));
+    url.setQuery(q);
+
+    QNetworkRequest req(url);
+    req.setTransferTimeout(8000);
+    QNetworkReply *reponse = meteoReseau_->get(req);
+    connect(reponse, &QNetworkReply::finished, this, [this, reponse] {
+        reponse->deleteLater();
+        if (reponse->error() == QNetworkReply::NoError) {
+            meteoInterventions_ = Intervention::lireMeteoJson(reponse->readAll());
+        } else {
+            meteoInterventions_ = Intervention::Meteo();
+            meteoHeure_ = QDateTime();                  // on réessaiera à la prochaine ouverture
+        }
+        majZonesRisqueInterventions();
+    });
+}
+
+void AXIS::majZonesRisqueInterventions()
+{
+    const QVector<Intervention::ZoneRisque> zones =
+        Intervention::detecterZonesRisque(interventions_, meteoInterventions_, 5);
+
+    QString html;
+    html += meteoInterventions_.disponible
+                ? QStringLiteral("<p style='margin:0 0 6px 0; color:#AAB0B6; font-size:12px'>Météo actuelle : %1</p>")
+                      .arg(meteoInterventions_.resume.toHtmlEscaped())
+                : QStringLiteral("<p style='margin:0 0 6px 0; color:#AAB0B6; font-size:12px'>"
+                                 "Météo indisponible : analyse basée sur l'historique.</p>");
+    if (zones.isEmpty()) {
+        html += QStringLiteral("<p style='margin:0'>Aucune zone à risque détectée pour le moment.</p>");
+    } else {
+        for (const Intervention::ZoneRisque &z : zones) {
+            const QString couleur = couleurMarqueur(z.niveau).name();
+            html += QStringLiteral("<p style='margin:0 0 5px 0'><span style='color:%1'>&#9679;</span> <b>%2</b> "
+                                   "<span style='color:%1'>risque %3</span><br>"
+                                   "<span style='color:#AAB0B6; font-size:12px'>&nbsp;&nbsp;&nbsp;%4</span></p>")
+                        .arg(couleur, z.nom.toHtmlEscaped(), z.niveau.toLower(), z.facteurs.toHtmlEscaped());
+        }
+    }
+    labelZonesContenu_->setText(html);
+
+    QVector<CarteWidget::Zone> zonesCarte;
+    for (const Intervention::ZoneRisque &z : zones) {
+        CarteWidget::Zone c;
+        c.lat = z.lat;
+        c.lon = z.lon;
+        c.rayonM = 700.0;
+        c.couleur = couleurMarqueur(z.niveau);
+        c.nom = z.nom;
+        zonesCarte.push_back(c);
+    }
+    carte_->setZones(zonesCarte);
 }
 
 // ==========================================
@@ -833,7 +1122,7 @@ CouleursVeh couleursVehicule(const QString &valeur)
 {
     if (valeur == "Bon" || valeur == "Disponible") return {"#dff5e6", "#1b7f43"};
     if (valeur == "À surveiller" || valeur == "En maintenance") return {"#fdebd3", "#b45f06"};
-    return {"#fde0e0", "#c0171d"};   
+    return {"#fde0e0", "#c0171d"};
 }
 
 QWidget *creerBadgeVehicule(const QString &texte)
@@ -926,7 +1215,7 @@ void AXIS::initialiserModuleVehicules()
         rafraichirListeVehicules();
     });
 
-    
+
     ui->leKmVeh->setValidator(new QRegularExpressionValidator(QRegularExpression("[0-9 ]{0,9}"), this));
     ui->lePlaqueVeh->setMaxLength(14);
 
@@ -962,9 +1251,9 @@ void AXIS::envoyerAlerteSmsVehicules()
     const QString fromNumber = qEnvironmentVariable("TWILIO_FROM_NUMBER").trimmed();
     if (accountSid.isEmpty() || authToken.isEmpty() || fromNumber.isEmpty()) {
         QMessageBox::warning(ui->PVehicule, "Configuration SMS",
-            "Configurez les variables d'environnement TWILIO_ACCOUNT_SID, "
-            "TWILIO_AUTH_TOKEN et TWILIO_FROM_NUMBER, puis relancez l'application.\n\n"
-            "Un compte Twilio actif et un numéro expéditeur autorisé sont nécessaires.");
+                             "Configurez les variables d'environnement TWILIO_ACCOUNT_SID, "
+                             "TWILIO_AUTH_TOKEN et TWILIO_FROM_NUMBER, puis relancez l'application.\n\n"
+                             "Un compte Twilio actif et un numéro expéditeur autorisé sont nécessaires.");
         return;
     }
 
@@ -981,7 +1270,7 @@ void AXIS::envoyerAlerteSmsVehicules()
 
     bool ok = false;
     const QString destinataire = QInputDialog::getText(ui->PVehicule, "Envoyer une alerte SMS", "Numéro du destinataire au format international (ex. +216XXXXXXXX) :",
-        QLineEdit::Normal, QString(), &ok).trimmed();
+                                                       QLineEdit::Normal, QString(), &ok).trimmed();
     static const QRegularExpression formatTelephone(R"(^\+[1-9][0-9]{7,14}$)");
     if (!ok) return;
     if (!formatTelephone.match(destinataire).hasMatch()) {
@@ -1158,7 +1447,7 @@ void AXIS::enregistrerVehicule()
                             {ui->leAssuranceVeh, &v.assurance, "Assurance"},
                             {ui->leVisiteVeh, &v.visiteTech, "Prochaine visite technique"}};
     for (const Champ &c : champs) {
-        if (c.edit->text().trimmed().isEmpty()) continue;      
+        if (c.edit->text().trimmed().isEmpty()) continue;
         *c.date = QDate::fromString(c.edit->text().trimmed(), kFormatDateVeh);
         if (!c.date->isValid()) {
             QMessageBox::warning(ui->PVehicule, "Date invalide",
@@ -1255,7 +1544,7 @@ void AXIS::exporterVehiculesExcel()
         QMessageBox::warning(ui->PVehicule, "Erreur", "Impossible d'écrire le fichier.");
         return;
     }
-    f.write("\xEF\xBB\xBF");   
+    f.write("\xEF\xBB\xBF");
     QTextStream out(&f);
 #if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
     out.setCodec("UTF-8");
@@ -1474,7 +1763,7 @@ void AXIS::rafraichirListeMateriels()
         cl->setSpacing(2);
         const int id = m.id;
         const struct { const char *emoji, *tip; int kind; } actions[] = {
-            {"👁️", "Afficher", 0}, {"✏️", "Modifier", 1}, {"🗑️", "Supprimer", 2}};
+                        {"👁️", "Afficher", 0}, {"✏️", "Modifier", 1}, {"🗑️", "Supprimer", 2}};
         for (const auto &a : actions) {
             auto *btn = new QToolButton;
             btn->setText(QString::fromUtf8(a.emoji));
@@ -1516,16 +1805,16 @@ void AXIS::rafraichirStatsMateriels()
     ui->donut->setData(crit, ok);
     auto pct = [&](int n) { return total ? qRound(100.0 * n / total) : 0; };
     ui->legendCrit->setText(QString("<span style='color:#d40000'>●</span> Stock critique <b>%1</b> (%2%)")
-                            .arg(crit).arg(pct(crit)));
+                                .arg(crit).arg(pct(crit)));
     ui->legendOk->setText(QString("<span style='color:#1e9e4a'>●</span> Stock suffisant <b>%1</b> (%2%)")
-                          .arg(ok).arg(pct(ok)));
+                              .arg(ok).arg(pct(ok)));
     ui->lblStockSub->setText(QString("%1 matériels enregistrés").arg(total));
     ui->lblCatSub->setText(QString("%1 catégories").arg(byCat.size()));
 
     // Bandeau + alerte magasinier
     if (crit > 0) {
         ui->bannerMat->setText(QString("Stock critique : %1 matériel%2 sous le seuil minimal.")
-                               .arg(crit).arg(crit > 1 ? "s" : ""));
+                                   .arg(crit).arg(crit > 1 ? "s" : ""));
         ui->bannerMat->show();
         QSet<int> ids;
         for (const Materiel &m : critical) ids.insert(m.id);
@@ -1743,8 +2032,8 @@ void AXIS::enregistrerGarde()
     }
 
     QMessageBox::information(this, "Succès",
-        gardeEnEdition_.isEmpty() ? "La garde a été enregistrée avec succès."
-                                 : QString("La garde #%1 a été modifiée.").arg(id));
+                             gardeEnEdition_.isEmpty() ? "La garde a été enregistrée avec succès."
+                                                       : QString("La garde #%1 a été modifiée.").arg(id));
     viderFormulaireGarde();
     rafraichirListeGardes();
     rafraichirStatsGardes();
@@ -1788,8 +2077,8 @@ void AXIS::afficherGarde(const QString &id)
 void AXIS::supprimerGarde(const QString &id)
 {
     if (QMessageBox::question(this, "Confirmation",
-            QString("Voulez-vous vraiment supprimer la garde #%1 ?").arg(id),
-            QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
+                              QString("Voulez-vous vraiment supprimer la garde #%1 ?").arg(id),
+                              QMessageBox::Yes | QMessageBox::No) != QMessageBox::Yes) {
         return;
     }
 
@@ -1817,7 +2106,7 @@ void AXIS::rafraichirListeGardes()
     for (const Garde &g : all) {
         if (!search.isEmpty()) {
             const QString haystack = QString("%1 %2 %3 %4 %5")
-                .arg(g.id, g.date.toString("dd/MM/yyyy"), g.type, g.statut, QString::number(g.effectif));
+            .arg(g.id, g.date.toString("dd/MM/yyyy"), g.type, g.statut, QString::number(g.effectif));
             if (!haystack.contains(search, Qt::CaseInsensitive))
                 continue;
         }
@@ -1938,9 +2227,9 @@ void AXIS::exporterGardesPdf()
 
     QString html = "<h2 style='color:#c00000'>A.X.I.S - Planning officiel des tours de garde</h2>"
                    "<p>Édité le " + QDateTime::currentDateTime().toString("dd/MM/yyyy à HH:mm") + "</p>"
-                   "<table border='1' cellspacing='0' cellpadding='4' width='100%'>"
-                   "<tr style='background:#eeeeee'><th>ID</th><th>Date</th><th>Type</th><th>Horaires</th>"
-                   "<th>Effectif requis</th><th>Statut</th></tr>";
+                                                                                   "<table border='1' cellspacing='0' cellpadding='4' width='100%'>"
+                                                                                   "<tr style='background:#eeeeee'><th>ID</th><th>Date</th><th>Type</th><th>Horaires</th>"
+                                                                                   "<th>Effectif requis</th><th>Statut</th></tr>";
 
     for (const Garde &g : all) {
         html += QString("<tr><td align='center'><b>#%1</b></td><td align='center'>%2</td>"
