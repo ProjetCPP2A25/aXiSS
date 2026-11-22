@@ -23,6 +23,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <QBoxLayout>
 
 // ==========================================
 // Outils d'affichage du module Interventions
@@ -1596,7 +1597,7 @@ void AXIS::initialiserModuleMateriels()
     h->setDefaultAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     h->setSectionResizeMode(QHeaderView::Fixed);
     h->setSectionResizeMode(2, QHeaderView::Stretch);
-    const int largeurs[] = {48, 80, 0, 92, 66, 46, 100, 98, 82, 76, 112};
+    const int largeurs[] = {48, 80, 0, 92, 66, 46, 100, 98, 82, 76,240 };
     for (int col = 0; col < 11; ++col)
         if (largeurs[col]) ui->tableMat->setColumnWidth(col, largeurs[col]);
     ui->tableMat->verticalHeader()->hide();
@@ -1604,7 +1605,12 @@ void AXIS::initialiserModuleMateriels()
 
     connect(ui->btnAddMat, &QPushButton::clicked, this, &AXIS::enregistrerMateriel);
     connect(ui->btnClearMat, &QPushButton::clicked, this, &AXIS::viderFormulaireMateriel);
-    connect(ui->btnExport, &QPushButton::clicked, this, &AXIS::exporterMateriels);
+    // Bouton « Historique mouvements » : tous les mouvements de tous les matériels
+    auto *btnHistAll = new QPushButton("Historique mouvements");
+    btnHistAll->setToolTip("Toutes les entrées et sorties de stock (filtres + export)");
+    if (auto *lay = qobject_cast<QBoxLayout *>(ui->btnExport->parentWidget()->layout()))
+        lay->addWidget(btnHistAll);
+    connect(btnHistAll, &QPushButton::clicked, this, [this] { dialogueHistoriqueGlobal(this); });
     connect(ui->leSearch, &QLineEdit::textChanged, this, &AXIS::rafraichirListeMateriels);
     connect(ui->cbSort, QOverload<int>::of(&QComboBox::currentIndexChanged),
             this, &AXIS::rafraichirListeMateriels);
@@ -1773,7 +1779,8 @@ void AXIS::rafraichirListeMateriels()
         cl->setSpacing(2);
         const int id = m.id;
         const struct { const char *emoji, *tip; int kind; } actions[] = {
-                        {"👁️", "Afficher", 0}, {"✏️", "Modifier", 1}, {"🗑️", "Supprimer", 2}};
+                        {"👁️", "Afficher", 0}, {"✏️", "Modifier", 1}, {"🗑️", "Supprimer", 2},
+                        {"📦", "Mouvement de stock", 3}, {"📜", "Historique", 4}};
         for (const auto &a : actions) {
             auto *btn = new QToolButton;
             btn->setText(QString::fromUtf8(a.emoji));
@@ -1783,7 +1790,18 @@ void AXIS::rafraichirListeMateriels()
             connect(btn, &QToolButton::clicked, this, [this, id, kind] {
                 if (kind == 0) afficherMateriel(id);
                 else if (kind == 1) chargerMateriel(id);
-                else supprimerMateriel(id);
+                else if (kind == 2) supprimerMateriel(id);
+                else if (kind == 3) {
+                    const Materiel mat = Materiel::trouver(id);
+                    if (mat.id != 0 && dialogueMouvement(this, mat)) {
+                        if (materielEnEdition_ == id) chargerMateriel(id);
+                        rafraichirListeMateriels();
+                        rafraichirStatsMateriels();
+                    }
+                } else if (kind == 4) {
+                    const Materiel mat = Materiel::trouver(id);
+                    if (mat.id != 0) dialogueHistorique(this, mat);
+                }
             });
             cl->addWidget(btn);
         }
