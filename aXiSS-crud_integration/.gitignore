@@ -1,0 +1,13 @@
+build/
+build-*/
+.qtcreator/
+*.user
+*.user.*
+.qtc_clangd/
+*.o
+*.exe
+.qmake.stash
+Makefile*
+ui_*.h
+debug/
+release/

@@ -1,0 +1,33 @@
+#include <QApplication>
+#include <QFile>
+#include <QMessageBox>
+#include "axis.h"
+#include "connexion.h"
+
+int main(int argc, char *argv[])
+{
+    QApplication a(argc, argv);
+    QCoreApplication::setOrganizationName("RedFlame");
+    QCoreApplication::setApplicationName("Caserne");
+
+    // Feuille de style : style.qss (inclus dans ressources.qrc)
+    QFile qss(":/style.qss");
+    if (qss.open(QIODevice::ReadOnly | QIODevice::Text))
+        a.setStyleSheet(QString::fromUtf8(qss.readAll()));
+
+    QString erreur;
+    if (!Connexion::ouvrir(erreur)) {
+        QMessageBox::critical(nullptr, "Base de données", erreur);
+        return 1;
+    }
+    // Page de connexion : l'application ne s'ouvre qu'après une authentification réussie
+    LoginDialog login;
+    if (login.exec() != QDialog::Accepted)
+        return 0;
+
+    AXIS w;
+    w.definirUtilisateur(login.session());
+    w.resize(1500, 850);
+    w.show();
+    return a.exec();
+}
