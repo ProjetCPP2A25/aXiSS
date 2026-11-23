@@ -6,6 +6,8 @@
 #include <QVariant>
 #include <QSqlQueryModel>
 #include <QRegularExpression>
+#include <QTime>
+#include <QDateTime>
 
 // Table Oracle GARDE (DDL : ID_GARDE, DATE_GARDE, TYPE, HEURE_DEBUT, HEURE_FIN, EFFECTIF, STATUT).
 static const char *kColsGarde =
@@ -98,6 +100,12 @@ QString Garde::prochainId()
 // ------------------------------------------------------------------ CREATE
 bool Garde::ajouter()
 {
+    QString err;
+    if (!horairesValides(date, type, heureDebut, heureFin, &err)) {
+        s_erreur = err;
+        return false;
+    }
+
     if (id.isEmpty()) id = prochainId();
     if (id.isEmpty()) return false;
 
@@ -119,6 +127,13 @@ bool Garde::ajouter()
 
 bool Garde::ajouter_garde(QString *err)
 {
+    QString errHoraires;
+    if (!horairesValides(date, type, heureDebut, heureFin, &errHoraires)) {
+        s_erreur = errHoraires;
+        if (err) *err = errHoraires;
+        return false;
+    }
+
     if (id.isEmpty()) id = prochainId();
     if (id.isEmpty()) {
         if (err) *err = QStringLiteral("Impossible de générer un ID");
@@ -148,6 +163,12 @@ bool Garde::ajouter_garde(QString *err)
 // ------------------------------------------------------------------ UPDATE
 bool Garde::modifier() const
 {
+    QString err;
+    if (!horairesValides(date, type, heureDebut, heureFin, &err)) {
+        s_erreur = err;
+        return false;
+    }
+
     QSqlQuery q(Connexion::oracle());
     q.prepare("UPDATE GARDE SET "
               "DATE_GARDE=?, TYPE=?, HEURE_DEBUT=?, HEURE_FIN=?, "
@@ -167,6 +188,17 @@ bool Garde::modifier() const
 
 bool Garde::modifier_garde(QString *err)
 {
+    QString errHoraires;
+    if (!horairesValides(date, type, heureDebut, heureFin, &errHoraires)) {
+        s_erreur = errHoraires;
+        if (err) *err = errHoraires;
+        return false;
+    }
+
+    QString cleanId = id;
+    cleanId.remove('#');
+    cleanId = cleanId.trimmed();
+
     QSqlQuery q(Connexion::oracle());
     q.prepare("UPDATE GARDE SET "
               "DATE_GARDE=?, TYPE=?, HEURE_DEBUT=?, HEURE_FIN=?, "
@@ -179,12 +211,10 @@ bool Garde::modifier_garde(QString *err)
     q.addBindValue(heureFin);
     q.addBindValue(effectif);
     q.addBindValue(statut);
-    q.addBindValue(id.toInt());
+    q.addBindValue(cleanId.toInt());
 
-    if (!lancer(q) || q.numRowsAffected() <= 0) {
-        if (err) *err = s_erreur.isEmpty()
-                        ? QStringLiteral("Aucune ligne modifiée (ID introuvable ?)")
-                        : s_erreur;
+    if (!lancer(q)) {
+        if (err) *err = s_erreur;
         return false;
     }
     return true;
@@ -193,7 +223,10 @@ bool Garde::modifier_garde(QString *err)
 // ------------------------------------------------------------------ DELETE
 bool Garde::supprimer(const QString &id)
 {
-    int numId = id.toInt();
+    QString cleanId = id;
+    cleanId.remove('#');
+    cleanId = cleanId.trimmed();
+    int numId = cleanId.toInt();
 
     // Supprime d'abord les liaisons associées dans la table AFFECTE si existantes
     QSqlQuery qAff(Connexion::oracle());
@@ -205,12 +238,15 @@ bool Garde::supprimer(const QString &id)
     q.prepare("DELETE FROM GARDE WHERE ID_GARDE=?");
     q.addBindValue(numId);
 
-    return lancer(q) && q.numRowsAffected() > 0;
+    return lancer(q);
 }
 
 bool Garde::supprimer_garde(const QString &id, QString *err)
 {
-    int numId = id.toInt();
+    QString cleanId = id;
+    cleanId.remove('#');
+    cleanId = cleanId.trimmed();
+    int numId = cleanId.toInt();
 
     // Supprime d'abord les liaisons associées dans la table AFFECTE si existantes
     QSqlQuery qAff(Connexion::oracle());
@@ -222,10 +258,8 @@ bool Garde::supprimer_garde(const QString &id, QString *err)
     q.prepare("DELETE FROM GARDE WHERE ID_GARDE=?");
     q.addBindValue(numId);
 
-    if (!lancer(q) || q.numRowsAffected() <= 0) {
-        if (err) *err = s_erreur.isEmpty()
-                        ? QStringLiteral("Aucune ligne supprimée (ID introuvable ?)")
-                        : s_erreur;
+    if (!lancer(q)) {
+        if (err) *err = s_erreur;
         return false;
     }
     return true;
@@ -234,11 +268,17 @@ bool Garde::supprimer_garde(const QString &id, QString *err)
 // ------------------------------------------------------------------ READ
 Garde Garde::trouver(const QString &id)
 {
+    QString cleanId = id;
+    cleanId.remove('#');
+    cleanId = cleanId.trimmed();
+
     QSqlQuery q(Connexion::oracle());
     q.prepare(QString("SELECT %1 FROM GARDE WHERE ID_GARDE=?").arg(kColsGarde));
-    q.addBindValue(id.toInt());
-    q.exec();
-    return q.next() ? depuis(q) : Garde();
+    q.addBindValue(cleanId.toInt());
+    if (q.exec() && q.next()) {
+        return depuis(q);
+    }
+    return Garde();
 }
 
 QVector<Garde> Garde::lister()
@@ -288,6 +328,47 @@ bool Garde::heureValide(const QString &heure)
 {
     static const QRegularExpression re(R"(^([01]?[0-9]|2[0-3]):[0-5][0-9]$)");
     return re.match(heure.trimmed()).hasMatch();
+}
+
+bool Garde::horairesValides(const QDate &dateGarde, const QString &type,
+                            const QString &heureDebut, const QString &heureFin,
+                            QString *messageErreur)
+{
+    if (!heureValide(heureDebut)) {
+        if (messageErreur) *messageErreur = QStringLiteral("L'heure de début n'est pas au format valide HH:mm (ex: 07:00).");
+        return false;
+    }
+    if (!heureValide(heureFin)) {
+        if (messageErreur) *messageErreur = QStringLiteral("L'heure de fin n'est pas au format valide HH:mm (ex: 19:00).");
+        return false;
+    }
+
+    const QDate dtBase = dateGarde.isValid() ? dateGarde : QDate::currentDate();
+    const QTime tDebut = QTime::fromString(heureDebut.trimmed(), "HH:mm");
+    const QTime tFin = QTime::fromString(heureFin.trimmed(), "HH:mm");
+
+    if (!tDebut.isValid() || !tFin.isValid()) {
+        if (messageErreur) *messageErreur = QStringLiteral("Heures spécifiées invalides.");
+        return false;
+    }
+
+    const QDateTime dtDebut(dtBase, tDebut);
+    // Pour une garde de type Nuit (ou si l'heure de fin est inférieure à l'heure de début),
+    // la fin s'étend sur le jour suivant (ex: 19:00 -> 07:00 du lendemain)
+    const bool passeMinuit = (type.compare("Nuit", Qt::CaseInsensitive) == 0) || (tFin < tDebut);
+    const QDateTime dtFin(passeMinuit ? dtBase.addDays(1) : dtBase, tFin);
+
+    if (dtFin < dtDebut) {
+        if (messageErreur) *messageErreur = QStringLiteral("La date et heure de fin ne peuvent pas être antérieures à la date et heure de début.");
+        return false;
+    }
+
+    if (dtFin == dtDebut) {
+        if (messageErreur) *messageErreur = QStringLiteral("L'heure de fin doit être différente de l'heure de début (la durée de garde ne peut pas être nulle).");
+        return false;
+    }
+
+    return true;
 }
 
 bool Garde::effectifValide(int effectif)

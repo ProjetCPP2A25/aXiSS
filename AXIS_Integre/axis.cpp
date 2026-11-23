@@ -2043,10 +2043,9 @@ void AXIS::enregistrerGarde()
     const int effectif = ui->spnEffectifGrd->value();
     const QString statut = ui->cbStatutGrd->currentText();
 
-    if (!Garde::heureValide(hDeb))
-        errors << "L'heure de début doit être au format valide HH:mm (ex: 07:00).";
-    if (!Garde::heureValide(hFin))
-        errors << "L'heure de fin doit être au format valide HH:mm (ex: 19:00).";
+    QString errHoraires;
+    if (!Garde::horairesValides(dt, type, hDeb, hFin, &errHoraires))
+        errors << errHoraires;
     if (!Garde::effectifValide(effectif))
         errors << "L'effectif doit être compris entre 1 et 50 sapeurs-pompiers.";
 

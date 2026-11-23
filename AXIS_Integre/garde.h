@@ -41,6 +41,9 @@ public:
     // Validations & Utilitaires (sur le modèle de Employe)
     static bool typeValide(const QString &type);
     static bool heureValide(const QString &heure);
+    static bool horairesValides(const QDate &dateGarde, const QString &type,
+                                const QString &heureDebut, const QString &heureFin,
+                                QString *messageErreur = nullptr);
     static bool effectifValide(int effectif);
     static bool existe(const QString &id);
 
